@@ -3,12 +3,14 @@ from scipy import misc
 import matplotlib.pyplot as plt
 import math
 import random
+import copy
 
 filename = 'sample_small.jpg'
+img = misc.imread(filename)
 epsilon = 10
 objects = 10
 population_size = 10
-
+mutation_rate = 0.05
 
 class RectangleEncoding:
 	def __init__(self, p1, p2, color, width):
@@ -16,6 +18,11 @@ class RectangleEncoding:
 		self.p2 = p2
 		self.color = color
 		self.width = width
+
+class DNAStrand:
+	def __init__(self, strand, fitness):
+		self.strand = strand
+		self.fitness = fitness
 
 
 def objective_function(current_rendition, actual):
@@ -74,20 +81,37 @@ def render_encoding(encodings, shape, dtype):
 	np.seterr(divide='ignore')
 	return np.divide(aggregate,weights).astype(np.uint8)
 
-img = misc.imread(filename)
+def gen_candidate(population):
+	new_candidates = []
+	for dna_strand in population:
+		new_strand = copy.deepcopy(dna_strand.strand)
+		for i in xrange(len(new_strand)):
+			if random.random() <= mutation_rate:
+				new_strand[i] = generate_random_encoding(img.shape)
+		new_error = objective_function(render_encoding(new_strand, img.shape, img.dtype), img)
+		new_dna_strand = DNAStrand(new_strand, new_error)
+		new_candidates.append(new_dna_strand)
+	return new_candidates
+
+
 population = []
 for i in xrange(population_size):
-	dna_strand = [generate_random_encoding(img.shape)]
+	strand = []
+	error = 0
+	dna_strand = DNAStrand(strand, error)
 	population.append(dna_strand)
-
-min_error = 999999
-for strand in population:
-	error = objective_function(render_encoding(strand, img.shape, img.dtype), img)
-	if error < min_error:
-		min_error = error
 
 
 for i in xrange(1,objects):
+
+	# add a gene
+	for dna_strand in population:
+		dna_strand.strand.append(generate_random_encoding(img.shape))
+		dna_strand.fitness = objective_function(render_encoding(dna_strand.strand, img.shape, img.dtype), img)
+
+	if i == 1:
+		population = sorted(population, key=lambda dna_strand: dna_strand.fitness)
+		min_error = population[0].fitness
 
     """
     repeat process until satisfied
@@ -96,29 +120,34 @@ for i in xrange(1,objects):
     epsilon = 10
     num_iter = 0
     error_change = 9999
-    while num_iter < max_num_iter and error_change < epsilon:
+    while num_iter < max_num_iter and error_change >= epsilon:
 
 		#generate new candidates via mutation?
 		new_candidates = gen_candidates(population)
 
-		fitness = []
-		for strand in new_candidates:
-			error = objective_function(render_encoding(strand, img.shape, img.dtype), img)
-			fitness.append(error)
+		compete_population = population + new_candidates
+
+		# pick the best
+		surviving_children = sorted(compete_population, key=lambda dna_strand: dna_strand.fitness)[:population_size]
+
+		#do some crossovers
+		#new_candidates = gen_crossovers(population)
+
+		#compete_population = population + new_candidates
+
+		# pick the best
+		#surviving_children = sorted(compete_population, key=lambda dna_strand: dna_strand.fitness)[:population_size]
+
+		new_best_error = surviving_children[0].fitness
+
+		error_change = min_error - new_best_error
+		min_error =new_best_error
+		population = surviving_children
+
+	
 
 
-
-	error_diff = 100
-
-	curr_error = objective_function(render_encoding(curr_list), img)
-
-		lowest_error = 9999999999
-		for _ in xrange(max_iters):
-			mutation = curr_list[:-1]
-			mutation.append(generate_random_encoding(img.shape))
-			new_error = objective_function(render_encoding(mutation), img)
-			if new_error < lowest_error:
-				lowest_error = new_error
+best_encoding = population[0].strand
 
 
 """
@@ -127,7 +156,7 @@ stuff = generate_random_encoding(img.shape)
 print stuff.p1, stuff.p2, stuff.width, stuff.color
 """
 
-plt.imshow(render_encoding([stuff],  img.shape, img.dtype))
+plt.imshow(render_encoding(best_encoding,  img.shape, img.dtype))
 plt.show()
 
 
