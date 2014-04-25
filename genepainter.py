@@ -14,7 +14,7 @@ objects = 10
 population_size = 100
 mutation_rate = 0.5
 min_iter = 10
-num_spline_points = 4
+num_spline_points = 2
 
 def read_image(file, use_alpha=False):
 	image_raw = Image.open(file)
@@ -48,7 +48,10 @@ class GeneStroke(object):
 		self.alpha = alpha
 		self.width = width
 
-	def spline(self, resolution=100, interpolation='cubic'):
+	def spline(self, resolution=1000, interpolation='cubic'):
+		if self.sx.size < 3:
+			return self.sx, self.sy
+
 		t = np.linspace(0, 1, self.sx.size)
 		sx = scipy.interpolate.interp1d(t, self.sx, kind=interpolation)
 		sy = scipy.interpolate.interp1d(t, self.sy, kind=interpolation)
@@ -61,7 +64,7 @@ class GeneStroke(object):
 		stroke.draw(r)
 
 	@classmethod
-	def random(cls, shape):
+	def random_encoding(cls, shape):
 		ymax, xmax = shape
 
 		pointsx = np.random.random(num_spline_points) * xmax
@@ -79,7 +82,7 @@ class GeneImage(object):
 		self.fitness = float('inf')
 
 		for _ in xrange(10):
-			self.strokes.append(GeneStroke.random(self.shape))
+			self.strokes.append(GeneStroke.random_encoding(self.shape))
 
 	def render(self):
 		w, h = self.shape
@@ -137,5 +140,8 @@ if __name__ == "__main__":
 
 	i = GeneImage((256, 256))
 	image = i.render()
+
+	plt.imshow(image, interpolation='none')
+	plt.show()
 
 	p.paint()
