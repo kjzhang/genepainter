@@ -21,7 +21,6 @@ class GenePainter(object):
 
 		x = np.array(np.random.random(4) * 128, dtype=np.float32)
 		y = np.array(np.random.random(4) * 128, dtype=np.float32)
-
 		sx, sy = spline(x, y, 1000)
 
 		t = time.time()
@@ -42,8 +41,14 @@ class GenePainter(object):
 		y = np.cos(3*t) * h*0.45 + h*0.5
 
 		t = time.time()
-		line = Line2D(sx, sy, linewidth=50, color=(1.0, 0.0, 0.0), alpha=0.3)
-		line.draw(r)
+		for _ in xrange(10):
+
+			x = np.array(np.random.random(4) * 256, dtype=np.float32)
+			y = np.array(np.random.random(4) * 256, dtype=np.float32)
+			sx, sy = spline(x, y, 1000)
+
+			line = Line2D(sx, sy, linewidth=50, color=(1.0, 0.0, 0.0), alpha=0.3)
+			line.draw(r)
 		print time.time() - t
 		# plt.imsave("test.png", arr)
 
