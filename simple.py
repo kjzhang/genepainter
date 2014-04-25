@@ -4,20 +4,23 @@ import matplotlib.pyplot as plt
 import math
 import random
 import copy
+import genepainter
 
 filename = 'sample_small.jpg'
 img = misc.imread(filename)
 epsilon = 10
 objects = 10
 population_size = 10
-mutation_rate = 0.05
+mutation_rate = 0.5
 min_iter = 10
+num_spline_points = 3
 
-class RectangleEncoding:
-    def __init__(self, p1, p2, color, width):
-        self.p1 = p1
-        self.p2 = p2
+class StrokeEncoding:
+    def __init__(self, pointsx, pointsy, color, alpha, width):
+        self.pointsx = pointsx
+        self.pointsy = pointsy
         self.color = color
+        self.alpha = alpha
         self.width = width
 
 class DNAStrand:
@@ -27,55 +30,19 @@ class DNAStrand:
 
 
 def objective_function(current_rendition, actual):
-    return np.sum(np.square(current_rendition - actual))
-
-
-def point_in_square(encoding, x, y):
-
-    (x1, y1) = encoding.p1
-    (x2, y2) = encoding.p2
-
-    if x1 == x2:
-        max_y = max(y1,y2)
-        min_y = min(y1,y2)
-        if y < max_y and y > min_y:
-            return encoding.width/2 < abs(x1  - x)
-        elif y > max_y:
-            return encoding.width/2 > math.sqrt( (x1-x)**2 + (y-max_y)**2  )
-        else:
-            return encoding.width/2 >  math.sqrt( (x1-x)**2 + (y-min_y)**2  )
-
-    m = 1.0*(y2-y1)/(x2-x1)
-    const = y1 - m*x1
-
-    a = m
-    b = -1
-    c = const
-
-    dist = abs(a*x+b*y+c)/math.sqrt(a*a+b*b)
-    xint = (b*(b*x - a*y)-a*c)/(a*a+b*b)
-    yint = (a*(-b*x+a*y)-b*c)/(a*a+b*b)
-
-    return dist < encoding.width/2 and xint >= min(x1,x2) and xint <= max(x2,x1)
+    fitness = np.sum(np.square(current_rendition - actual))
+    return fitness
 
 def generate_random_encoding(shape):
     ymax, xmax, _ = shape
-    red = random.randint(0,255)
-    blue = random.randint(0,255)
-    green = random.randint(0,255)
-    x1 = random.randint(0, xmax)
-    y1 = random.randint(0, ymax)
-    x2 = random.randint(0, xmax)
-    y2 = random.randint(0, ymax)
+    pointsx = np.random.random(num_spline_points) * xmax
+    pointsy = np.random.random(num_spline_points) * ymax
+
+    color = tuple(np.random.random(3))
+    alpha = random.random()
     width = random.randint(0, min(ymax,xmax)/2)
-    return RectangleEncoding((x1,y1), (x2,y2), [red,green,blue],  width)
+    return StrokeEncoding(pointsx, pointsy, color, alpha, width)
 
-
-"""
-object has 2 points, color, and width
------------------------------------------
-
-"""
 def render_encoding(encodings, shape, dtype):
     aggregate = np.zeros(shape=shape, dtype=np.int32)
     weights = np.zeros(shape=shape, dtype=np.int32)
@@ -124,9 +91,8 @@ for i in xrange(1,objects):
         dna_strand.strand.append(generate_random_encoding(img.shape))
         dna_strand.fitness = objective_function(render_encoding(dna_strand.strand, img.shape, img.dtype), img)
 
-    if i == 1:
-        population = sorted(population, key=lambda dna_strand: dna_strand.fitness)
-        min_error = population[0].fitness
+    population = sorted(population, key=lambda dna_strand: dna_strand.fitness)
+    min_error = population[0].fitness
 
     """
     repeat process until satisfied
