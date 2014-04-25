@@ -8,12 +8,31 @@ import genepainter
 
 filename = 'sample_small.jpg'
 img = misc.imread(filename)
-epsilon = 10
-objects = 10
+
+#population size and strokes per strand
+num_strokes = 50
 population_size = 10
-mutation_rate = 0.5
-min_iter = 10
-num_spline_points = 3
+min_spline_points = 2
+max_spline_points = 3
+
+#evolving parameters
+add_mutation_rate = 0.2
+change_or_delete_mutation_rate = 0.07
+# delete from 0 to 0.5, 0.5 to 1 is change
+conditional_delete_mutation_rate = 0.5
+num_children = 25
+
+#crossover rates
+crossover_rate = 0.2
+num_crossovers = 25
+
+#iterations
+min_iter = 100
+max_num_iter = 1000
+epsilon = 10
+num_iter = 0
+error_change = 9999
+
 
 class StrokeEncoding:
     def __init__(self, pointsx, pointsy, color, alpha, width):
@@ -35,6 +54,7 @@ def objective_function(current_rendition, actual):
 
 def generate_random_encoding(shape):
     ymax, xmax, _ = shape
+    num_spline_points = random.randint(min_spline_points, max_spline_points)
     pointsx = np.random.random(num_spline_points) * xmax
     pointsy = np.random.random(num_spline_points) * ymax
 
@@ -48,86 +68,98 @@ def render_encoding(encodings, shape, dtype):
     weights = np.zeros(shape=shape, dtype=np.int32)
     row, col, channel = shape
 
-    for i in xrange(row):
-        for j in xrange(col):
-                y = row - i
-                x = j
-                for encoding in encodings:
-                    if point_in_square(encoding, x, y):
-                        for k in xrange(channel):
-                            aggregate[i,j,k] = encoding.color[k]
-                            weights[i,j] += 1
-
-    np.seterr(divide='ignore')
-    return np.divide(aggregate,weights).astype(np.uint8)
+    return None
 
 def gen_candidates(population):
     new_candidates = []
-    for dna_strand in population:
-        new_strand = copy.deepcopy(dna_strand.strand)
+
+    for _ in xrange(num_children):
+        random_child_index = random.randint(0, population_size)
+        new_strand = copy.deepcopy(population[random_child_index].strand)
+
+        delete_indexes = []
+
         for i in xrange(len(new_strand)):
-            if random.random() <= mutation_rate:
-                new_strand[i] = generate_random_encoding(img.shape)
+            rand = random.random()
+            if rand <= change_or_delete_mutation_rate:
+                #rescale rand
+                rand = rand/change_or_delete_mutation_rate
+                if rand <= conditional_delete_mutation_rate:
+                    delete_indexes.append(i)
+                else:
+                    new_strand[i] = generate_random_encoding(img.shape)
+
+        #delete
+        for i in xrange(len(delete_indexes)-1, -1, -1):
+            del new_strand[i]
+
+        if random.random() <= add_mutation_rate:
+            new_strand.append(generate_random_encoding(img.shape))
+
         new_error = objective_function(render_encoding(new_strand, img.shape, img.dtype), img)
         new_dna_strand = DNAStrand(new_strand, new_error)
         new_candidates.append(new_dna_strand)
+    return new_candidates
+
+def crossover(population):
+    new_candidates = []
+
+    for _ in xrange(num_crossovers):
+        rand1 = random.randint(0, population_size-1)
+        rand2 = random.randint(0, population_size-1)
+        if rand1 != rand2:
+            strand_a = population[rand1].strand
+            strand_b = population[rand2].strand
+            new_strand = copy.deepcopy(strand_a)
+            for i in xrange(len(strand_a)):
+                if i > len(strand_b):
+                    break
+                if random.random() <= crossover_rate:
+                    new_strand[i] = strand_b[i]
+            new_error = objective_function(render_encoding(new_strand, img.shape, img.dtype), img)
+            new_dna_strand = DNAStrand(new_strand, new_error)
+            new_candidates.append(new_dna_strand)
     return new_candidates
 
 
 population = []
 for i in xrange(population_size):
     strand = []
-    error = 0
+    for _ in xrange(num_strokes):
+        strand.append(generate_random_encoding(img.shape))
+    error = objective_function(render_encoding(strand, img.shape, img.dtype), img)
     dna_strand = DNAStrand(strand, error)
     population.append(dna_strand)
 
 
-for i in xrange(1,objects):
 
-    print "add object ", i
+while (num_iter < max_num_iter and error_change >= epsilon) or num_iter <= min_iter:
 
-    # add a gene
-    for dna_strand in population:
-        dna_strand.strand.append(generate_random_encoding(img.shape))
-        dna_strand.fitness = objective_function(render_encoding(dna_strand.strand, img.shape, img.dtype), img)
+    print "iter"
 
-    population = sorted(population, key=lambda dna_strand: dna_strand.fitness)
-    min_error = population[0].fitness
+    #generate new candidates via mutation?
+    new_candidates = gen_candidates(population)
 
-    """
-    repeat process until satisfied
-    """
-    max_num_iter = 1000
-    epsilon = 10
-    num_iter = 0
-    error_change = 9999
-    while (num_iter < max_num_iter and error_change >= epsilon) or num_iter <= min_iter:
+    compete_population = population + new_candidates
 
-        print "iter"
+    # pick the best
+    surviving_children = sorted(compete_population, key=lambda dna_strand: dna_strand.fitness)[:population_size]
 
-        #generate new candidates via mutation?
-        new_candidates = gen_candidates(population)
+    #do some crossovers
+    #new_candidates = gen_crossovers(population)
 
-        compete_population = population + new_candidates
+    #compete_population = population + new_candidates
 
-        # pick the best
-        surviving_children = sorted(compete_population, key=lambda dna_strand: dna_strand.fitness)[:population_size]
+    # pick the best
+    #surviving_children = sorted(compete_population, key=lambda dna_strand: dna_strand.fitness)[:population_size]
 
-        #do some crossovers
-        #new_candidates = gen_crossovers(population)
+    new_best_error = surviving_children[0].fitness
 
-        #compete_population = population + new_candidates
-
-        # pick the best
-        #surviving_children = sorted(compete_population, key=lambda dna_strand: dna_strand.fitness)[:population_size]
-
-        new_best_error = surviving_children[0].fitness
-
-        error_change = abs(min_error - new_best_error)
-        print error_change
-        min_error =new_best_error
-        population = surviving_children
-        num_iter += 1
+    error_change = abs(min_error - new_best_error)
+    print error_change
+    min_error =new_best_error
+    population = surviving_children
+    num_iter += 1
 
     
 
