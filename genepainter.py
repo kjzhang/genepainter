@@ -23,6 +23,22 @@ strokes_max = 100
 min_spline_points = 2
 max_spline_points = 3
 
+
+
+# mutation, stroke level
+p_spline_point_add = 0.5
+p_spline_point_edit = 0.5
+p_spline_point_delete = 0.5
+
+# mutation, image level
+p_stroke_add = 0.
+p_stroke_edit = 0
+p_stroke_delte = 0.5
+
+# mutation, population level
+p_crossover = 0
+
+
 #evolving parameters
 add_mutation_rate = 0.2
 change_or_delete_mutation_rate = 0.07
@@ -41,7 +57,7 @@ num_iter = 0
 epsilon = 10
 
 def output_name(iteration, id):
-	pass	
+    pass    
 
 def read_image(file, use_alpha=False):
     image_raw = Image.open(file)
@@ -97,7 +113,55 @@ class GeneStroke(object):
         stroke.draw(r)
 
     def mutate(self):
-    	pass
+        # spline point add
+        if np.random.random() < p_spline_point_add and self.sx.size < max_spline_points:
+            px, py = self.random_point()
+            self.sx.append(px)
+            self.sy.append(py)
+
+        # spline point delete
+        if np.random.random() < p_spline_point_delete and self.sx.size > min_spline_points:
+            pass
+
+    def mutate_value(self, center, radius, min_value, max_value):
+        valid = False
+        while not valid:
+            new_value = np.random.normal(center, radius)
+            if new_value >= min_value and new_value <= max_value:
+                valid=True
+        return new_value
+
+    def random_color(self, center=None, radius=None):
+        if center is not None and radius is not None:
+            old_R, old_G, old_B = center
+            new_R = self.mutate_value(old_R, radius, 0.0, 1.0)
+            new_G = self.mutate_value(old_G, radius, 0.0, 1.0)
+            new_B = self.mutate_value(old_B, radius, 0.0, 1.0)
+        else:
+            new_R = np.random.random()
+            new_G = np.random.random()
+            new_B = np.random.random()
+
+        return new_R, new_G, new_B
+
+    def random_point(self, center=None, radius=None):
+        ymax, xmax = self.shape
+
+        if center is not None and radius is not None:
+            cx, cy = center
+
+            valid = False
+            while not valid:
+                px = np.random.normal(cx, radius)
+                py = np.random.normal(cy, radius)
+
+                if px >= 0.0 and px <= xmax and py >= 0.0 and py <= ymax:
+                    valid = True
+            return px, py
+
+        px = np.random.random() * ymax
+        py = np.random.random() * xmax
+        return px, py
 
     @classmethod
     def random(cls, shape):
@@ -173,9 +237,9 @@ class GenePainter(object):
         self.population = []
 
     def paint_hill_climbing(self):
-    	dna = DNAImage(self.shape)
-    	dna.update_fitness(self.source)
-    	self.population.append(dna)
+        dna = DNAImage(self.shape)
+        dna.update_fitness(self.source)
+        self.population.append(dna)
 
 
 
@@ -231,6 +295,9 @@ class GenePainter(object):
 
         plt.imshow(self.population[0].render(), interpolation='none')
         plt.show()
+
+
+s = GeneStroke((256, 256), np.random.random(4), np.random.random(4), (1.0, 1.0, 0.5), 0.9, 15)
 
 if __name__ == "__main__":
 
