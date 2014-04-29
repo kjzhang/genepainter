@@ -10,9 +10,16 @@ from PIL import Image
 from matplotlib.backends.backend_agg import RendererAgg
 from matplotlib.lines import Line2D
 
-#population size and strokes per strand
-num_strokes = 50
-population_size = 10
+# images per population
+population_size = 1000
+population_interval = 1
+
+# strokes per image
+strokes_start = 1
+strokes_min = 10
+strokes_max = 100
+
+# points per stroke
 min_spline_points = 2
 max_spline_points = 3
 
@@ -28,10 +35,13 @@ crossover_rate = 0.2
 num_crossovers = 25
 
 #iterations
-min_iter = 50000
-max_num_iter = 10000
-epsilon = 10
+min_num_iter = 1000
+max_num_iter = 1000
 num_iter = 0
+epsilon = 10
+
+def output_name(iteration, id):
+	pass	
 
 def read_image(file, use_alpha=False):
     image_raw = Image.open(file)
@@ -39,7 +49,10 @@ def read_image(file, use_alpha=False):
     image = np.array(image_raw, dtype=np.float32) / 255
     return image if use_alpha else rgba_to_rgb(image)
 
-def rgba_to_rgb(image_raw):
+def rgba_to_rgb(image_raw, background=(1.0, 1.0, 1.0)):
+    """ Convert an RGBA image to an RGB image.
+    """
+
     shape = (image_raw.shape[0], image_raw.shape[1], 3)
 
     R = image_raw[:, :, 0]
@@ -47,18 +60,21 @@ def rgba_to_rgb(image_raw):
     B = image_raw[:, :, 2]
     A = image_raw[:, :, 3]
 
+    BG_R, BG_G, BG_B = background
+
     image = np.zeros(shape, dtype=np.float32)
-    image[:, :, 0] = np.multiply(A, R) + ((1.0 - A) * 1.0)
-    image[:, :, 1] = np.multiply(A, G) + ((1.0 - A) * 1.0)
-    image[:, :, 2] = np.multiply(A, B) + ((1.0 - A) * 1.0)
+    image[:, :, 0] = np.multiply(A, R) + ((1.0 - A) * BG_R)
+    image[:, :, 1] = np.multiply(A, G) + ((1.0 - A) * BG_G)
+    image[:, :, 2] = np.multiply(A, B) + ((1.0 - A) * BG_B)
 
     return image
 
 class GeneStroke(object):
-    def __init__(self, sx, sy, color, alpha, width):
+    def __init__(self, shape, sx, sy, color, alpha, width):
         if sx.ndim != 1 or sy.ndim != 1 or sx.size != sy.size:
             raise Exception()
 
+        self.shape = shape
         self.sx = sx
         self.sy = sy
         self.color = color
@@ -80,6 +96,9 @@ class GeneStroke(object):
         stroke = Line2D(sx, sy, color=self.color, alpha=self.alpha, lw=self.width, solid_capstyle="round")
         stroke.draw(r)
 
+    def mutate(self):
+    	pass
+
     @classmethod
     def random(cls, shape):
         ymax, xmax = shape
@@ -92,7 +111,7 @@ class GeneStroke(object):
         alpha = np.random.uniform(0.25, 1)
         width = random.randint(0, min(ymax, xmax) / 4)
 
-        return cls(pointsx, pointsy, color, alpha, width)
+        return cls(shape, pointsx, pointsy, color, alpha, width)
 
 class DNAImage(object):
     def __init__(self, shape, strokes=None):
@@ -101,7 +120,7 @@ class DNAImage(object):
 
         if strokes is None:
             self.strokes = []
-            for _ in xrange(num_strokes):
+            for _ in xrange(strokes_start):
                 self.strokes.append(GeneStroke.random(self.shape))
         else:
             self.strokes = strokes
@@ -153,6 +172,13 @@ class GenePainter(object):
         self.shape = source.shape[0], source.shape[1]
         self.population = []
 
+    def paint_hill_climbing(self):
+    	dna = DNAImage(self.shape)
+    	dna.update_fitness(self.source)
+    	self.population.append(dna)
+
+
+
     def paint(self):
 
         for _ in xrange(population_size):
@@ -164,7 +190,7 @@ class GenePainter(object):
         error_change = 9999
         min_error = 999999
 
-        while (num_iter < max_num_iter and error_change >= epsilon) or num_iter <= min_iter:
+        while num_iter <= min_num_iter or (num_iter < max_num_iter and error_change >= epsilon):
 
             print num_iter
 
@@ -175,6 +201,9 @@ class GenePainter(object):
                 mutation = self.population[rand_int].mutate()
                 mutation.update_fitness(self.source)
                 new_candidates.append(mutation)
+
+
+
 
             compete_population = self.population + new_candidates
 
@@ -189,12 +218,15 @@ class GenePainter(object):
             # pick the best
             #surviving_children = sorted(compete_population, key=lambda dna_strand: dna_strand.fitness)[:population_size]
 
+
             new_best_error = surviving_children[0].fitness
 
             error_change = min_error - new_best_error
             print error_change
             min_error = new_best_error
             self.population = surviving_children
+
+            #print [dna.fitness for dna in self.population]
             num_iter += 1
 
         plt.imshow(self.population[0].render(), interpolation='none')
