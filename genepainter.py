@@ -11,19 +11,17 @@ from matplotlib.backends.backend_agg import RendererAgg
 from matplotlib.lines import Line2D
 
 # images per population
-population_size = 1000
+population_size = 100
 population_interval = 1
 
 # strokes per image
-strokes_start = 1
+strokes_start = 10
 strokes_min = 10
 strokes_max = 100
 
 # points per stroke
 min_spline_points = 2
-max_spline_points = 3
-
-
+max_spline_points = 4
 
 # mutation, stroke level
 p_spline_point_add = 0.5
@@ -38,21 +36,20 @@ p_stroke_delte = 0.5
 # mutation, population level
 p_crossover = 0
 
-
 #evolving parameters
 add_mutation_rate = 0.2
-change_or_delete_mutation_rate = 0.07
+change_or_delete_mutation_rate = 0.1
 # delete from 0 to 0.5, 0.5 to 1 is change
 conditional_delete_mutation_rate = 0.5
-num_children = 25
+num_children = 50
 
 #crossover rates
 crossover_rate = 0.2
 num_crossovers = 25
 
 #iterations
-min_num_iter = 1000
-max_num_iter = 1000
+min_num_iter = 25000
+max_num_iter = 25000
 num_iter = 0
 epsilon = 10
 
@@ -149,18 +146,12 @@ class GeneStroke(object):
 
         if center is not None and radius is not None:
             cx, cy = center
+            px = self.mutate_value(cx, radius, 0.0, xmax)
+            py = self.mutate_value(cy, radius, 0.0, ymax)
+        else:
+            px = np.random.random() * ymax
+            py = np.random.random() * xmax
 
-            valid = False
-            while not valid:
-                px = np.random.normal(cx, radius)
-                py = np.random.normal(cy, radius)
-
-                if px >= 0.0 and px <= xmax and py >= 0.0 and py <= ymax:
-                    valid = True
-            return px, py
-
-        px = np.random.random() * ymax
-        py = np.random.random() * xmax
         return px, py
 
     @classmethod
@@ -305,4 +296,17 @@ if __name__ == "__main__":
 
     p = GenePainter(source)
 
-    p.paint()
+#    p.paint()
+
+
+    image = DNAImage((256, 256), strokes=[])
+    stroke = GeneStroke.random((256, 256))
+    image.strokes.append(stroke)
+
+    plt.imshow(image.render(), interpolation='none')
+    plt.show()
+
+    stroke.color = stroke.random_color(stroke.color, 0.25)
+
+    plt.imshow(image.render(), interpolation='none')
+    plt.show()
