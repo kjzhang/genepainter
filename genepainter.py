@@ -5,6 +5,7 @@ import random
 import scipy.interpolate
 import time
 import copy
+import datetime
 
 from PIL import Image
 from matplotlib.backends.backend_agg import RendererAgg
@@ -14,17 +15,23 @@ from matplotlib.lines import Line2D
 population_size = 100
 population_interval = 1
 
+# bias of how long a newly created gene lasts
+dna_life_bias = 1
+
+# migration
+migrate_count = 20
+
 # strokes per image
 strokes_start = 10
 strokes_min = 10
-strokes_max = 100
+strokes_max = 50
 
 # points per stroke
 min_spline_points = 2
-max_spline_points = 4
+max_spline_points = 3
 
 # mutation, stroke level
-p_spline_point_add = 0.5
+p_spline_point_add = 0.1
 p_spline_point_edit = 0.5
 p_spline_point_delete = 0.5
 
@@ -37,8 +44,8 @@ p_stroke_delte = 0.5
 p_crossover = 0
 
 #evolving parameters
-add_mutation_rate = 0.2
-change_or_delete_mutation_rate = 0.1
+add_mutation_rate = 0.3
+change_or_delete_mutation_rate = 0.2
 # delete from 0 to 0.5, 0.5 to 1 is change
 conditional_delete_mutation_rate = 0.5
 num_children = 50
@@ -48,10 +55,52 @@ crossover_rate = 0.2
 num_crossovers = 25
 
 #iterations
-min_num_iter = 25000
-max_num_iter = 25000
+min_num_iter = 50000
+max_num_iter = 100000
 num_iter = 0
 epsilon = 10
+
+
+def load_dna(filename):
+    f = open(filename, 'r')
+    lines = f.readlines()
+    f.close()
+    strokes = []
+    for line in lines:
+        info = line.split(';')
+        shape_tmp = info[0].split(':')[1][1:-1].split(',')
+        shape = (int(shape_tmp[0][:-1]), int(shape_tmp[1][:-1]))
+
+        sx_tmp = info[1].split(':')[1][1:-1].split(' ')
+        sx = []
+        for str_rep in sx_tmp:
+            if len(str_rep) > 0:
+                sx.append(float(str_rep))
+        sx = np.array(sx)
+
+        sy_tmp = info[2].split(':')[1][1:-1].split(' ')
+        sy = []
+        for str_rep in sy_tmp:
+            if len(str_rep) > 0:
+                sy.append(float(str_rep))
+        sy = np.array(sy)
+
+        color_tmp = info[3].split(':')[1][1:-1].split(',')
+        color = tuple([ float(val) for val in color_tmp])
+
+        alpha = float(info[4].split(':')[1])
+        width = int(info[5].split(':')[1])
+        strokes.append(GeneStroke(shape, sx, sy, color, alpha, width))
+
+    return strokes
+
+def dump_dna(dna, filename=None):
+    if filename is None:
+        filename = 'dna' + str((datetime.datetime.now() - datetime.datetime(1970,1,1)).total_seconds()) + '.txt'
+    f = open(filename, 'w')
+    for stroke in dna:
+        f.write('shape:' + str(stroke.shape) + ';sx:' + str(stroke.sx) + ';sy:' + str(stroke.sy) + ';color:' + str(stroke.color) + ';alpha:' + str(stroke.alpha) + ';width:' + str(stroke.width) + "\n")
+    f.close()
 
 def output_name(iteration, id):
     pass    
@@ -239,7 +288,7 @@ class GenePainter(object):
         for _ in xrange(population_size):
             dna = DNAImage(self.shape)
             dna.update_fitness(self.source)
-            self.population.append(dna)
+            self.population.append( (0, dna) )
 
         num_iter = 0
         error_change = 9999
@@ -253,17 +302,36 @@ class GenePainter(object):
             new_candidates = []
             for _ in xrange(num_children):
                 rand_int = random.randint(0, population_size-1)
-                mutation = self.population[rand_int].mutate()
+                mutation = self.population[rand_int][1].mutate()
                 mutation.update_fitness(self.source)
-                new_candidates.append(mutation)
+                new_candidates.append((0,mutation))
 
-
-
+            # increase the age of the old population
+            for i in xrange(population_size):
+                self.population[i] = (self.population[i][0]+1, self.population[i][1])
 
             compete_population = self.population + new_candidates
 
-            # pick the best
-            surviving_children = sorted(compete_population, key=lambda dna: dna.fitness)[:population_size]
+            younglings = []
+            aged = []
+            for (age, dna) in compete_population:
+                if age < dna_life_bias:
+                    younglings.append((age,dna))
+                else:
+                    aged.append((age,dna))
+
+            for _ in xrange(migrate_count):
+                dna = DNAImage(self.shape)
+                dna.update_fitness(self.source)
+                younglings.append( (0, dna) )
+
+
+            # pick the best out of the old children
+            strong_parents = sorted(aged, key=lambda (age, dna): dna.fitness)[:population_size]
+
+            alive = strong_parents + younglings
+            alive = sorted(alive, key=lambda (age, dna): dna.fitness)
+
 
             #do some crossovers
             #new_candidates = gen_crossovers(population)
@@ -274,31 +342,36 @@ class GenePainter(object):
             #surviving_children = sorted(compete_population, key=lambda dna_strand: dna_strand.fitness)[:population_size]
 
 
-            new_best_error = surviving_children[0].fitness
+            new_best_error = alive[0][1].fitness
 
             error_change = min_error - new_best_error
             print error_change
             min_error = new_best_error
-            self.population = surviving_children
+            self.population = alive
 
             #print [dna.fitness for dna in self.population]
             num_iter += 1
 
-        plt.imshow(self.population[0].render(), interpolation='none')
+            if num_iter > 1000 and error_change > 0:
+                for z in xrange(10):
+                    dump_dna(self.population[0][1].strokes, str(num_iter) + '-' + str(z) + '.txt')
+
+        for z in xrange(10):
+            dump_dna(self.population[0][1].strokes, str(z) + '.txt')
+
+        plt.imshow(self.population[0][1].render(), interpolation='none')
         plt.show()
-
-
-s = GeneStroke((256, 256), np.random.random(4), np.random.random(4), (1.0, 1.0, 0.5), 0.9, 15)
 
 if __name__ == "__main__":
 
     source = read_image('ML257.png')
+    #(a,b,c) = source.shape
+    #dump_dna(DNAImage((a,b)).strokes)
 
     p = GenePainter(source)
+    p.paint()
 
-#    p.paint()
-
-
+    """
     image = DNAImage((256, 256), strokes=[])
     stroke = GeneStroke.random((256, 256))
     image.strokes.append(stroke)
@@ -310,3 +383,4 @@ if __name__ == "__main__":
 
     plt.imshow(image.render(), interpolation='none')
     plt.show()
+    """
