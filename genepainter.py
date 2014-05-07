@@ -5,6 +5,7 @@ import random
 import scipy.interpolate
 import time
 import copy
+import datetime
 
 from PIL import Image
 from matplotlib.backends.backend_agg import RendererAgg
@@ -18,7 +19,7 @@ population_interval = 1
 dna_life_bias = 1
 
 # migration
-migrate_count = 100
+migrate_count = 20
 
 # strokes per image
 strokes_start = 10
@@ -44,21 +45,63 @@ p_crossover = 0
 
 
 #evolving parameters
-add_mutation_rate = 0.1
-change_or_delete_mutation_rate = 0.1
+add_mutation_rate = 0.3
+change_or_delete_mutation_rate = 0.2
 # delete from 0 to 0.5, 0.5 to 1 is change
 conditional_delete_mutation_rate = 0.5
-num_children = 100
+num_children = 50
 
 #crossover rates
 crossover_rate = 0.2
 num_crossovers = 25
 
 #iterations
-min_num_iter = 1000
-max_num_iter = 10000
+min_num_iter = 50000
+max_num_iter = 100000
 num_iter = 0
 epsilon = 10
+
+
+def load_dna(filename):
+    f = open(filename, 'r')
+    lines = f.readlines()
+    f.close()
+    strokes = []
+    for line in lines:
+        info = line.split(';')
+        shape_tmp = info[0].split(':')[1][1:-1].split(',')
+        shape = (int(shape_tmp[0][:-1]), int(shape_tmp[1][:-1]))
+
+        sx_tmp = info[1].split(':')[1][1:-1].split(' ')
+        sx = []
+        for str_rep in sx_tmp:
+            if len(str_rep) > 0:
+                sx.append(float(str_rep))
+        sx = np.array(sx)
+
+        sy_tmp = info[2].split(':')[1][1:-1].split(' ')
+        sy = []
+        for str_rep in sy_tmp:
+            if len(str_rep) > 0:
+                sy.append(float(str_rep))
+        sy = np.array(sy)
+
+        color_tmp = info[3].split(':')[1][1:-1].split(',')
+        color = tuple([ float(val) for val in color_tmp])
+
+        alpha = float(info[4].split(':')[1])
+        width = int(info[5].split(':')[1])
+        strokes.append(GeneStroke(shape, sx, sy, color, alpha, width))
+
+    return strokes
+
+def dump_dna(dna, filename=None):
+    if filename is None:
+        filename = 'dna' + str((datetime.datetime.now() - datetime.datetime(1970,1,1)).total_seconds()) + '.txt'
+    f = open(filename, 'w')
+    for stroke in dna:
+        f.write('shape:' + str(stroke.shape) + ';sx:' + str(stroke.sx) + ';sy:' + str(stroke.sy) + ';color:' + str(stroke.color) + ';alpha:' + str(stroke.alpha) + ';width:' + str(stroke.width) + "\n")
+    f.close()
 
 def output_name(iteration, id):
     pass    
@@ -316,15 +359,21 @@ class GenePainter(object):
             #print [dna.fitness for dna in self.population]
             num_iter += 1
 
+            if num_iter > 1000 and error_change > 0:
+                for z in xrange(10):
+                    dump_dna(self.population[0][1].strokes, str(num_iter) + '-' + str(z) + '.txt')
+
+        for z in xrange(10):
+            dump_dna(self.population[0][1].strokes, str(z) + '.txt')
+
         plt.imshow(self.population[0][1].render(), interpolation='none')
         plt.show()
 
-
-s = GeneStroke((256, 256), np.random.random(4), np.random.random(4), (1.0, 1.0, 0.5), 0.9, 15)
-
 if __name__ == "__main__":
 
-    source = read_image('ML33.png')
+    source = read_image('ML257.png')
+    #(a,b,c) = source.shape
+    #dump_dna(DNAImage((a,b)).strokes)
 
     p = GenePainter(source)
 
