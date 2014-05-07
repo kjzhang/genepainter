@@ -31,22 +31,24 @@ strokes_max = 50
 
 # points per stroke
 min_spline_points = 2
-max_spline_points = 3
+max_spline_points = 4
 
 # alpha start
 alpha_min = 0.25
 alpha_max = 1.0
 
 # mutation, stroke level
-p_spline_point_add = 0.1
-p_spline_point_edit = 0.5
-p_spline_point_delete = 0.5
+p_spline_point_add = 0.2
+p_spline_point_delete = 0.1
+
+p_stroke_color = 0.2
+p_stroke_alpha = 0.2
+p_stroke_width = 0.2
 
 ### IMAGE PARAMETERS
 
 # mutation, image level
-p_stroke_add = 0.
-p_stroke_edit = 0
+p_stroke_add = 0.0
 p_stroke_delte = 0.5
 
 ### POPULATION PARAMETERS
@@ -113,9 +115,6 @@ def dump_dna(dna, filename=None):
         f.write('shape:' + str(stroke.shape) + ';sx:' + str(stroke.sx) + ';sy:' + str(stroke.sy) + ';color:' + str(stroke.color) + ';alpha:' + str(stroke.alpha) + ';width:' + str(stroke.width) + "\n")
     f.close()
 
-def output_name(iteration, id):
-    pass    
-
 def read_image(file, use_alpha=False):
     image_raw = Image.open(file)
     image_raw.load()
@@ -154,6 +153,14 @@ class GeneStroke(object):
         self.alpha = alpha
         self.width = width
 
+    @property
+    def min_dim(self):
+        return min(self.shape)
+
+    @property
+    def max_dim(self):
+        return max(self.shape)
+
     def spline(self, resolution=1000, interpolation='cubic'):
         if self.sx.size <= 3:
             return self.sx, self.sy
@@ -170,15 +177,29 @@ class GeneStroke(object):
         stroke.draw(r)
 
     def mutate(self):
+        # mutate color
+        if np.random.random() < 1:#p_stroke_color:
+            self.color = self.random_color(self.color, 0.1)
+
+        # mutate alpha
+        if np.random.random() < 1:#p_stroke_alpha:
+            self.alpha = self.mutate_value(self.alpha, 0.1, alpha_min, alpha_max)
+
+        # mutate width
+        if np.random.random() < 1:#p_stroke_width:
+            self.width = self.mutate_value(self.width, self.min_dim * 0.1, 1, self.min_dim * 0.25)
+
         # spline point add
         if np.random.random() < p_spline_point_add and self.sx.size < max_spline_points:
             px, py = self.random_point()
-            self.sx.append(px)
-            self.sy.append(py)
+            self.sx = np.append(self.sx, px)
+            self.sy = np.append(self.sy, py)
 
         # spline point delete
         if np.random.random() < p_spline_point_delete and self.sx.size > min_spline_points:
-            pass
+            index = np.random.randint(self.sx.size)
+            self.sx = np.delete(self.sx, index)
+            self.sy = np.delete(self.sy, index)
 
     def mutate_value(self, center, radius, min_value, max_value):
         valid = False
@@ -246,9 +267,9 @@ class DNAImage(object):
         self.fitness = float('inf')
 
     def render(self):
-    	""" Renders the image from the set of strokes and returns an RGB image
-    		with dimensions self.shape.
-    	"""
+        """ Renders the image from the set of strokes and returns an RGB image
+            with dimensions self.shape.
+        """
         w, h = self.shape
         r = RendererAgg(w, h, 72)
         arr = np.frombuffer(r.buffer_rgba(), np.uint8)
@@ -261,9 +282,9 @@ class DNAImage(object):
         return rgba_to_rgb(image_raw)
 
     def update_fitness(self, source):
-    	""" Update the fitness score of the image, the MSE between the current
-    		set of strokes and the source image.
-    	"""
+        """ Update the fitness score of the image, the MSE between the current
+            set of strokes and the source image.
+        """
         image = self.render()
         self.fitness = np.sum(np.square(source - image))
 
@@ -389,9 +410,9 @@ if __name__ == "__main__":
     #dump_dna(DNAImage((a,b)).strokes)
 
     p = GenePainter(source)
-    p.paint()
+    #p.paint()
 
-    """
+    
     image = DNAImage((256, 256), strokes=[])
     stroke = GeneStroke.random((256, 256))
     image.strokes.append(stroke)
@@ -399,8 +420,8 @@ if __name__ == "__main__":
     plt.imshow(image.render(), interpolation='none')
     plt.show()
 
-    stroke.color = stroke.random_color(stroke.color, 0.25)
+    stroke.mutate()
 
     plt.imshow(image.render(), interpolation='none')
     plt.show()
-    """
+    
