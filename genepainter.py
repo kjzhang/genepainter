@@ -21,6 +21,9 @@ dna_life_bias = 1
 # migration
 migrate_count = 20
 
+
+### STROKE PARAMETERS
+
 # strokes per image
 strokes_start = 10
 strokes_min = 10
@@ -30,15 +33,23 @@ strokes_max = 50
 min_spline_points = 2
 max_spline_points = 3
 
+# alpha start
+alpha_min = 0.25
+alpha_max = 1.0
+
 # mutation, stroke level
 p_spline_point_add = 0.1
 p_spline_point_edit = 0.5
 p_spline_point_delete = 0.5
 
+### IMAGE PARAMETERS
+
 # mutation, image level
 p_stroke_add = 0.
 p_stroke_edit = 0
 p_stroke_delte = 0.5
+
+### POPULATION PARAMETERS
 
 # mutation, population level
 p_crossover = 0
@@ -207,20 +218,21 @@ class GeneStroke(object):
     def random(cls, shape):
         ymax, xmax = shape
 
-        num_spline_points = random.randint(min_spline_points, max_spline_points)
-
+        num_spline_points = np.random.randint(min_spline_points, max_spline_points + 1)
         pointsx = np.random.random(num_spline_points) * xmax
         pointsy = np.random.random(num_spline_points) * ymax
+
         color = tuple(np.random.random(3))
-        alpha = np.random.uniform(0.25, 1)
+        alpha = np.random.uniform(alpha_min, alpha_max)
+
+        # TODO: set width limits
         width = random.randint(0, min(ymax, xmax) / 4)
 
         return cls(shape, pointsx, pointsy, color, alpha, width)
 
 class DNAImage(object):
-    def __init__(self, shape, strokes=None):
+    def __init__(self, shape, strokes=None, age=0):
         self.shape = shape
-        self.fitness = float('inf')
 
         if strokes is None:
             self.strokes = []
@@ -229,7 +241,14 @@ class DNAImage(object):
         else:
             self.strokes = strokes
 
+        self.age = age
+
+        self.fitness = float('inf')
+
     def render(self):
+    	""" Renders the image from the set of strokes and returns an RGB image
+    		with dimensions self.shape.
+    	"""
         w, h = self.shape
         r = RendererAgg(w, h, 72)
         arr = np.frombuffer(r.buffer_rgba(), np.uint8)
@@ -242,6 +261,9 @@ class DNAImage(object):
         return rgba_to_rgb(image_raw)
 
     def update_fitness(self, source):
+    	""" Update the fitness score of the image, the MSE between the current
+    		set of strokes and the source image.
+    	"""
         image = self.render()
         self.fitness = np.sum(np.square(source - image))
 
@@ -280,8 +302,6 @@ class GenePainter(object):
         dna = DNAImage(self.shape)
         dna.update_fitness(self.source)
         self.population.append(dna)
-
-
 
     def paint(self):
 

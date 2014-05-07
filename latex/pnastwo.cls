@@ -324,7 +324,7 @@ This version is dated \currversion^^J^^J}
 \footlinefont
 \ifodd\c@page
 \hbox to \textwidth{\footlinefont \let\it\footlineit
-\theurl\hfill\footlinefont PNAS\hskip6pt  \vrule depth 2pt\hskip6pt 
+\theurl\hfill\footlinefont
 {\foliofont\theissuedate}\hskip6pt\vrule\hskip6pt\thevolume\hskip6pt 
 \vrule\hskip6pt\theissuenumber\hskip6pt \vrule\hskip6pt
 \the\c@page{\footlineit--}\expandafter\ifx\csname 
@@ -340,7 +340,7 @@ lastpage\endcsname\relax ??\else\lastpage\fi}\hskip6pt
 \fi\else%
 \ifodd\c@page
 \hbox to\textwidth{{\let\it\footlineit\footlinefont\thefootlineauthor}\hfill
-\footlinefont PNAS\hskip6pt\vrule depth 2pt\hskip6pt{\foliofont\theissuedate}%
+\footlinefont {\foliofont\theissuedate}%
 \hskip6pt\vrule depth2pt\hskip6pt\thevolume\hskip6pt\vrule depth 2pt\hskip6pt\theissuenumber\hskip6pt\vrule\hskip6pt{\foliofont\the\c@page}}%
 \else%
 \hbox to\textwidth{\let\it\footlineit\footlinefont{\foliofont \the\c@page}%
@@ -3065,13 +3065,9 @@ tabnote\the\tablenotenum\endcsname
 
 \def\track#1{\footcomment{#1}}
 
-\url{www.pnas.org --- ---}
-\issuedate{Issue Date}
 \copyrightyear{2007}
-\volume{Volume}
-\issuenumber{Issue Number}
 %\setcounter{page}{2687}
-\footlineauthor{AM205}
+\footlineauthor{CS289}
 
 \long\def\@footnotetext#1{\insert\footins{%
     \reset@font\footnotesize
