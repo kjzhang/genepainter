@@ -10,18 +10,20 @@ from PIL import Image
 from matplotlib.backends.backend_agg import RendererAgg
 from matplotlib.lines import Line2D
 
+from genepainter import dump_dna
+
 #population size and strokes per strand
 num_strokes = 50
-population_size = 1
+population_size = 10
 min_spline_points = 2
-max_spline_points = 3   
+max_spline_points = 3
 
 #evolving parameters
-add_mutation_rate = 0
+add_mutation_rate = 0.2
 change_or_delete_mutation_rate = 0.07
 # delete from 0 to 0.5, 0.5 to 1 is change
 conditional_delete_mutation_rate = 0.5
-num_children = 1
+num_children = 25
 
 #crossover rates
 crossover_rate = 0.2
@@ -29,7 +31,7 @@ num_crossovers = 25
 
 #iterations
 min_iter = 50000
-max_num_iter = 50000
+max_num_iter = 10000
 epsilon = 10
 num_iter = 0
 
@@ -55,10 +57,11 @@ def rgba_to_rgb(image_raw):
     return image
 
 class GeneStroke(object):
-    def __init__(self, sx, sy, color, alpha, width):
+    def __init__(self, shape, sx, sy, color, alpha, width):
         if sx.ndim != 1 or sy.ndim != 1 or sx.size != sy.size:
             raise Exception()
 
+        self.shape = shape
         self.sx = sx
         self.sy = sy
         self.color = color
@@ -92,7 +95,7 @@ class GeneStroke(object):
         alpha = np.random.uniform(0.25, 1)
         width = random.randint(0, min(ymax, xmax) / 4)
 
-        return cls(pointsx, pointsy, color, alpha, width)
+        return cls(shape, pointsx, pointsy, color, alpha, width)
 
 class DNAImage(object):
     def __init__(self, shape, strokes=None):
@@ -127,11 +130,8 @@ class DNAImage(object):
 
         delete_indexes = []
 
-
-        num_strokes = len(new_strokes)
         for i in xrange(len(new_strokes)):
-            change_or_delete_mutation_rate = 0.5 * ((i+1)**2)/(num_strokes*(num_strokes+1)*(num_strokes+2)/6)
-            rand = random.random() * 1.0
+            rand = random.random()
             if rand <= change_or_delete_mutation_rate:
                 #rescale rand
                 rand = rand/change_or_delete_mutation_rate
@@ -159,58 +159,57 @@ class GenePainter(object):
     def paint(self):
 
         for _ in xrange(population_size):
-            strokes = [GeneStroke.random(self.shape)]
-            dna = DNAImage(self.shape, strokes)
+            dna = DNAImage(self.shape)
             dna.update_fitness(self.source)
             self.population.append(dna)
 
-        for _ in xrange(num_strokes):
+        num_iter = 0
+        error_change = 9999
+        min_error = 999999
 
-            num_iter = 0
-            error_change = 9999
-            min_error = 999999
+        while (num_iter < max_num_iter and error_change >= epsilon) or num_iter <= min_iter:
 
-            while (num_iter < max_num_iter and error_change >= epsilon) or num_iter <= min_iter:
+            print num_iter
 
-                print num_iter
+            #generate new candidates via mutation?
+            new_candidates = []
+            for _ in xrange(num_children):
+                rand_int = random.randint(0, population_size-1)
+                mutation = self.population[rand_int].mutate()
+                mutation.update_fitness(self.source)
+                new_candidates.append(mutation)
 
-                #generate new candidates via mutation?
-                new_candidates = []
-                for _ in xrange(num_children):
-                    rand_int = random.randint(0, population_size-1)
-                    mutation = self.population[rand_int].mutate()
-                    mutation.update_fitness(self.source)
-                    new_candidates.append(mutation)
+            compete_population = self.population + new_candidates
 
-                compete_population = self.population + new_candidates
+            # pick the best
+            surviving_children = sorted(compete_population, key=lambda dna: dna.fitness)[:population_size]
 
-                # pick the best
-                surviving_children = sorted(compete_population, key=lambda dna: dna.fitness)[:population_size]
+            #do some crossovers
+            #new_candidates = gen_crossovers(population)
 
-                #do some crossovers
-                #new_candidates = gen_crossovers(population)
+            #compete_population = population + new_candidates
 
-                #compete_population = population + new_candidates
+            # pick the best
+            #surviving_children = sorted(compete_population, key=lambda dna_strand: dna_strand.fitness)[:population_size]
 
-                # pick the best
-                #surviving_children = sorted(compete_population, key=lambda dna_strand: dna_strand.fitness)[:population_size]
+            new_best_error = surviving_children[0].fitness
 
-                new_best_error = surviving_children[0].fitness
+            error_change = min_error - new_best_error
+            print error_change
+            min_error = new_best_error
+            self.population = surviving_children
+            num_iter += 1
 
-                error_change = min_error - new_best_error
-                print error_change
-                min_error = new_best_error
-                self.population = surviving_children
-                num_iter += 1
-
-            self.population[0].strokes.append(GeneStroke.random(self.shape))
+            if error_change > 0.0:
+                for z in xrange(10):
+                    dump_dna(self.population[0].strokes, 'original ' + str(num_iter) + '-' + str(z) + '.txt')
 
         plt.imshow(self.population[0].render(), interpolation='none')
         plt.show()
 
 if __name__ == "__main__":
 
-    source = read_image('images/picasso128.png')
+    source = read_image('images/ML129.png')
 
     p = GenePainter(source)
 

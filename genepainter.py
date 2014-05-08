@@ -11,49 +11,52 @@ from PIL import Image
 from matplotlib.backends.backend_agg import RendererAgg
 from matplotlib.lines import Line2D
 
+from multiprocessing import Pool
+
 
 ### STROKE PARAMETERS
 
 # strokes per image
-strokes_start = 10
 strokes_min = 10
 strokes_max = 100
+strokes_start = 1
 
 # points per stroke
 min_spline_points = 2
 max_spline_points = 4
 
 # alpha start
-alpha_min = 0.25
+alpha_min = 0.1
 alpha_max = 1.0
 
 # mutation, stroke level
-p_spline_point_add = 0.2
-p_spline_point_delete = 0.1
+p_spline_point_add = 0.25
+p_spline_point_delete = 0.15
+p_spline_point_edit = 0.25
 
-p_stroke_color = 0.2
-p_stroke_alpha = 0.2
-p_stroke_width = 0.2
+p_stroke_color = 0.25
+p_stroke_alpha = 0.25
+p_stroke_width = 0.25
 
 
 ### IMAGE PARAMETERS
 
 # mutation, image level
-p_stroke_add = 0.0
-p_stroke_delete = 0.01
+p_stroke_add = 0.25
+p_stroke_delete = 0.05
 
 
 ### POPULATION PARAMETERS
 
 # images per population
-population_size = 40
+population_size = 100
 population_interval = 1
-
-# successful parent cutoff
-parent_cutoff = 0.25
 
 # kill all parents
 kill_parents = False
+
+# successful parent cutoff
+parent_cutoff = 0.25
 
 # crossover mutation, population level
 p_crossover = 0
@@ -104,10 +107,11 @@ def load_dna(filename):
         color = tuple([ float(val) for val in color_tmp])
 
         alpha = float(info[4].split(':')[1])
-        width = int(info[5].split(':')[1])
+        width = float(info[5].split(':')[1])
         strokes.append(GeneStroke(shape, sx, sy, color, alpha, width))
 
     return strokes
+
 
 def dump_dna(dna, filename=None):
     if filename is None:
@@ -117,11 +121,13 @@ def dump_dna(dna, filename=None):
         f.write('shape:' + str(stroke.shape) + ';sx:' + str(stroke.sx) + ';sy:' + str(stroke.sy) + ';color:' + str(stroke.color) + ';alpha:' + str(stroke.alpha) + ';width:' + str(stroke.width) + "\n")
     f.close()
 
+
 def read_image(file, use_alpha=False):
     image_raw = Image.open(file)
     image_raw.load()
     image = np.array(image_raw, dtype=np.float32) / 255
     return image if use_alpha else rgba_to_rgb(image)
+
 
 def rgba_to_rgb(image_raw, background=(1.0, 1.0, 1.0)):
     """ Convert an RGBA image to an RGB image.
@@ -142,6 +148,7 @@ def rgba_to_rgb(image_raw, background=(1.0, 1.0, 1.0)):
     image[:, :, 2] = np.multiply(A, B) + ((1.0 - A) * BG_B)
 
     return image
+
 
 class GeneStroke(object):
     def __init__(self, shape, sx, sy, color, alpha, width):
@@ -179,29 +186,43 @@ class GeneStroke(object):
         stroke.draw(r)
 
     def mutate(self):
-        # mutate color
-        if np.random.random() < p_stroke_color:
-            self.color = self.random_color(self.color, 0.15)
+        updated = False
 
-        # mutate alpha
-        if np.random.random() < p_stroke_alpha:
-            self.alpha = self.mutate_value(self.alpha, 0.15, alpha_min, alpha_max)
+        while not updated:
+            # mutate color
+            if np.random.random() < p_stroke_color:
+                self.color = self.random_color(self.color, 0.15)
+                updated = True
 
-        # mutate width
-        if np.random.random() < p_stroke_width:
-            self.width = self.mutate_value(self.width, self.min_dim * 0.15, self.min_dim * 0.05, self.min_dim * 0.15)
+            # mutate alpha
+            if np.random.random() < p_stroke_alpha:
+                self.alpha = self.mutate_value(self.alpha, 0.15, alpha_min, alpha_max)
+                updated = True
 
-        # spline point add
-        if np.random.random() < p_spline_point_add and self.sx.size < max_spline_points:
-            px, py = self.random_point()
-            self.sx = np.append(self.sx, px)
-            self.sy = np.append(self.sy, py)
+            # mutate width
+            if np.random.random() < p_stroke_width:
+                self.width = self.mutate_value(self.width, self.min_dim * 0.15, self.min_dim * 0.05, self.min_dim * 0.15)
+                updated = True
 
-        # spline point delete
-        if np.random.random() < p_spline_point_delete and self.sx.size > min_spline_points:
-            index = np.random.randint(self.sx.size)
-            self.sx = np.delete(self.sx, index)
-            self.sy = np.delete(self.sy, index)
+            # spline point add
+            if np.random.random() < p_spline_point_add and self.sx.size < max_spline_points:
+                px, py = self.random_point()
+                self.sx = np.append(self.sx, px)
+                self.sy = np.append(self.sy, py)
+                updated = True
+
+            # spline point delete
+            if np.random.random() < p_spline_point_delete and self.sx.size > min_spline_points:
+                index = np.random.randint(self.sx.size)
+                self.sx = np.delete(self.sx, index)
+                self.sy = np.delete(self.sy, index)
+                updated = True
+
+            if np.random.random() < p_spline_point_edit:
+            	for index in xrange(self.sx.size):
+            		self.sx[index] = self.mutate_value(self.sx[index], self.shape[0] * 0.05, 0, self.shape[0])
+            		self.sy[index] = self.mutate_value(self.sy[index], self.shape[1] * 0.05, 0, self.shape[1])
+        		updated = True
 
     def mutate_value(self, center, radius, min_value, max_value):
         valid = False
@@ -251,6 +272,7 @@ class GeneStroke(object):
 
         return cls(shape, pointsx, pointsy, color, alpha, width)
 
+
 class DNAImage(object):
     def __init__(self, shape, strokes=None, age=0):
         self.shape = shape
@@ -289,28 +311,29 @@ class DNAImage(object):
         self.fitness = np.sum(np.square(source - image))
 
     def mutate(self):
+    	# mutate
         new_strokes = copy.deepcopy(self.strokes)
+        for n in new_strokes:
+            n.mutate()
 
+        # add
+        if np.random.random() < p_stroke_add:
+        	new_strokes.append(GeneStroke.random(self.shape))
+
+       	# delete
         delete_indexes = []
-
         for i in xrange(len(new_strokes)):
-            rand = random.random()
-            if rand <= change_or_delete_mutation_rate:
-                #rescale rand
-                rand = rand/change_or_delete_mutation_rate
-                if rand <= conditional_delete_mutation_rate:
-                    delete_indexes.append(i)
-                else:
-                    new_strokes[i] = GeneStroke.random(self.shape)
-
-        #delete
-        for i in xrange(len(delete_indexes)-1, -1, -1):
+            if np.random.random() < p_stroke_delete:
+            	delete_indexes.append(i)
+        for i in xrange(len(delete_indexes) - 1, -1, -1):
             del new_strokes[i]
 
-        if random.random() <= add_mutation_rate:
-            new_strokes.append(GeneStroke.random(self.shape))
-        new_dna = DNAImage(self.shape, new_strokes)
-        return new_dna
+        # replace
+        for i in xrange(len(new_strokes)):
+        	if np.random.random() < 0.1:
+        		new_strokes[i] = GeneStroke.random(self.shape)
+
+        return DNAImage(self.shape, new_strokes)
 
 
 class GenePainter(object):
@@ -321,7 +344,9 @@ class GenePainter(object):
 
     def paint(self):
 
-    	image = plt.imshow(self.source, interpolation='none', animated=True)
+        pool = Pool(processes=4)
+
+        image = plt.imshow(self.source, interpolation='none', animated=True)
         plt.draw()
 
         for _ in xrange(population_size):
@@ -337,13 +362,19 @@ class GenePainter(object):
 
             print "Generation:", num_iter
 
-            #generate new candidates via mutation?
+            #generate new candidates via mutation
             new_candidates = []
-            for _ in xrange(num_children):
-                rand_int = random.randint(0, population_size-1)
-                mutation = self.population[rand_int].mutate()
-                mutation.update_fitness(self.source)
-                new_candidates.append(mutation)
+
+            for index in xrange(int(population_size * parent_cutoff)):
+                child = self.population[index].mutate()
+                child.update_fitness(self.source)
+                new_candidates.append(child)
+
+            # for _ in xrange(num_children):
+            #     index = random.randint(0, population_size * parent_cutoff)
+            #     child = self.population[index].mutate()
+            #     child.update_fitness(self.source)
+            #     new_candidates.append(child)
 
             self.population.extend(new_candidates)
 
@@ -374,15 +405,16 @@ class GenePainter(object):
             #print [dna.fitness for dna in self.population]
             num_iter += 1
 
-            if num_iter > 1000 and error_change > 0:
+            if num_iter > 100 and error_change > 0:
                 for z in xrange(10):
-                    dump_dna(self.population[0][1].strokes, str(num_iter) + '-' + str(z) + '.txt')
+                    dump_dna(self.population[0].strokes, str(num_iter) + '-' + str(z) + '.txt')
 
         for z in xrange(10):
-            dump_dna(self.population[0][1].strokes, str(z) + '.txt')
+            dump_dna(self.population[0].strokes, str(z) + '.txt')
 
-        plt.imshow(self.population[0][1].render(), interpolation='none')
+        plt.imshow(self.population[0].render(), interpolation='none')
         plt.show()
+
 
 def sample_mutation():
     image = DNAImage((256, 256), strokes=[])
@@ -400,7 +432,7 @@ def sample_mutation():
 
 if __name__ == "__main__":
 
-    source = read_image('ML129.png')
+    source = read_image('images/ML129.png')
     p = GenePainter(source)
     p.paint()
 
