@@ -11,16 +11,6 @@ from PIL import Image
 from matplotlib.backends.backend_agg import RendererAgg
 from matplotlib.lines import Line2D
 
-# images per population
-population_size = 100
-population_interval = 1
-
-# bias of how long a newly created gene lasts
-dna_life_bias = 1
-
-# migration
-migrate_count = 20
-
 
 ### STROKE PARAMETERS
 
@@ -45,16 +35,25 @@ p_stroke_color = 0.2
 p_stroke_alpha = 0.2
 p_stroke_width = 0.2
 
+
 ### IMAGE PARAMETERS
 
 # mutation, image level
 p_stroke_add = 0.0
-p_stroke_delte = 0.5
+p_stroke_delete = 0.5
+
 
 ### POPULATION PARAMETERS
 
+# images per population
+population_size = 100
+population_interval = 1
+
 # mutation, population level
 p_crossover = 0
+
+
+# OLD PARAMETERS
 
 #evolving parameters
 add_mutation_rate = 0.3
@@ -67,7 +66,8 @@ num_children = 50
 crossover_rate = 0.2
 num_crossovers = 25
 
-#iterations
+
+# ITERATION PARAMETERS
 min_num_iter = 50000
 max_num_iter = 100000
 num_iter = 0
@@ -178,16 +178,16 @@ class GeneStroke(object):
 
     def mutate(self):
         # mutate color
-        if np.random.random() < 1:#p_stroke_color:
-            self.color = self.random_color(self.color, 0.1)
+        if np.random.random() < p_stroke_color:
+            self.color = self.random_color(self.color, 0.15)
 
         # mutate alpha
-        if np.random.random() < 1:#p_stroke_alpha:
-            self.alpha = self.mutate_value(self.alpha, 0.1, alpha_min, alpha_max)
+        if np.random.random() < p_stroke_alpha:
+            self.alpha = self.mutate_value(self.alpha, 0.15, alpha_min, alpha_max)
 
         # mutate width
-        if np.random.random() < 1:#p_stroke_width:
-            self.width = self.mutate_value(self.width, self.min_dim * 0.1, 1, self.min_dim * 0.25)
+        if np.random.random() < p_stroke_width:
+            self.width = self.mutate_value(self.width, self.min_dim * 0.15, self.min_dim * 0.05, self.min_dim * 0.15)
 
         # spline point add
         if np.random.random() < p_spline_point_add and self.sx.size < max_spline_points:
@@ -245,9 +245,7 @@ class GeneStroke(object):
 
         color = tuple(np.random.random(3))
         alpha = np.random.uniform(alpha_min, alpha_max)
-
-        # TODO: set width limits
-        width = random.randint(0, min(ymax, xmax) / 4)
+        width = random.randint(round(min(ymax, xmax) * 0.05), round(min(ymax, xmax) * 0.15))
 
         return cls(shape, pointsx, pointsy, color, alpha, width)
 
@@ -319,17 +317,12 @@ class GenePainter(object):
         self.shape = source.shape[0], source.shape[1]
         self.population = []
 
-    def paint_hill_climbing(self):
-        dna = DNAImage(self.shape)
-        dna.update_fitness(self.source)
-        self.population.append(dna)
-
     def paint(self):
 
         for _ in xrange(population_size):
             dna = DNAImage(self.shape)
             dna.update_fitness(self.source)
-            self.population.append( (0, dna) )
+            self.population.append(dna)
 
         num_iter = 0
         error_change = 9999
@@ -337,42 +330,21 @@ class GenePainter(object):
 
         while num_iter <= min_num_iter or (num_iter < max_num_iter and error_change >= epsilon):
 
-            print num_iter
+            print "Iteration:", num_iter
 
             #generate new candidates via mutation?
             new_candidates = []
             for _ in xrange(num_children):
                 rand_int = random.randint(0, population_size-1)
-                mutation = self.population[rand_int][1].mutate()
+                mutation = self.population[rand_int].mutate()
                 mutation.update_fitness(self.source)
-                new_candidates.append((0,mutation))
+                new_candidates.append(mutation)
 
-            # increase the age of the old population
-            for i in xrange(population_size):
-                self.population[i] = (self.population[i][0]+1, self.population[i][1])
+            self.population.extend(new_candidates)
 
-            compete_population = self.population + new_candidates
-
-            younglings = []
-            aged = []
-            for (age, dna) in compete_population:
-                if age < dna_life_bias:
-                    younglings.append((age,dna))
-                else:
-                    aged.append((age,dna))
-
-            for _ in xrange(migrate_count):
-                dna = DNAImage(self.shape)
-                dna.update_fitness(self.source)
-                younglings.append( (0, dna) )
-
-
-            # pick the best out of the old children
-            strong_parents = sorted(aged, key=lambda (age, dna): dna.fitness)[:population_size]
-
-            alive = strong_parents + younglings
-            alive = sorted(alive, key=lambda (age, dna): dna.fitness)
-
+            # update population
+            for dna in self.population:
+            	dna.age += 1
 
             #do some crossovers
             #new_candidates = gen_crossovers(population)
@@ -382,13 +354,14 @@ class GenePainter(object):
             # pick the best
             #surviving_children = sorted(compete_population, key=lambda dna_strand: dna_strand.fitness)[:population_size]
 
+            self.population = sorted(self.population, key=lambda strand: strand.fitness)
+            self.population = self.population[:population_size]
 
-            new_best_error = alive[0][1].fitness
-
+            # update error
+            new_best_error = self.population[0].fitness
             error_change = min_error - new_best_error
-            print error_change
             min_error = new_best_error
-            self.population = alive
+            print error_change
 
             #print [dna.fitness for dna in self.population]
             num_iter += 1
@@ -410,7 +383,7 @@ if __name__ == "__main__":
     #dump_dna(DNAImage((a,b)).strokes)
 
     p = GenePainter(source)
-    #p.paint()
+    p.paint()
 
     
     image = DNAImage((256, 256), strokes=[])
