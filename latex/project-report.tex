@@ -437,6 +437,11 @@ Our minimal supervision implementation uses the following parameters: the number
 
 In comparison to our minimal supervision, the maximal supervision incorporates crossovers as specified above as well as a child retention policy. In addition, we attempt to factor in mutation on a gene level by replacing the stroke editing with a gene mutation.
 
+Additionally, we have also tested strategies involving hill climbing. Starting with an initial set of strokes, we attempt to randomly mutate them until we find a local minimum. Upon finding the local minimum, we add a new stroke before returning to the mutation process. However, because we want these intial strokes to be the base and want to focus on mutating these newly added strokes, we scale the probability of mutating so that the newer strokes have a higher probability. In particular, we used
+
+\[ P_k = P_c\frac{k^2}{\sum\limits_{i=0}^n i^2} \]
+where $P_c$ is a constant and $n$ is the current number of strokes in the pool.
+
 \section{Experiments and Results}
 Below, we present the optimal results from running on our machines as well as on the AWS cluster. The simulations took approximately 8 hours each on a 4.4Ghz i-3570k machine. 
 
@@ -484,10 +489,15 @@ Below, we present the optimal results from running on our machines as well as on
 
 
 \section{Discussion}
-Contrary to our expectations, the more forced learning that we attempted to insert into the process, the worse the image quality became. When sticking to simpler methods, our processed images generally had the wrong 
+Contrary to our expectations, the more forced learning that we attempted to insert into the process, the worse the image quality became. When sticking to simpler methods, our processed images generally appeared to be able to be able to adapt to the image much more concretely in exchange for having an intially slow start in mutating. In comparison, our supervised methods mutated constantly initially but were unable to restructure itself to the finer details.
+
+However, we also note that the unsupervised method would have difficulty in refining the details of the image. We believe that a more robust way would be to then add a supervised algorithm after the unsupervised portion in order to fine tune the details. As a result, once the base image had been formed as we can see is happening for our unsupervised algorithm, the finer details can be fleched out. There is unfortunately no cross point at which we can determine when the unsupervised portion should terminate but based on our experiments, 50,000 iterations appears to be the limitation or threshold at which the unsupervised algorithm is unable to refine the image further without an excessive amount of computation.
 
 \section{Conclusion}
 For our project, we implemented an image painter that evolves images toward a target with a genetic algorithm. Although our results are encouraging in that the overall structure of the brush strokes is a reasonable representation of the original image, many improvements could be made.  First, we confirmed our original hypothesis of allowing for arbitrary spline curves as brush strokes greatly increases the size of the problem space. Thus, with the additional computation overhead of evaluating splines, many more generations are required for images to converge to a better optimum. Given more time, we would like to run our simulations for a greater number of generations; note that Alsing's Mona Lisa was run for over 900,000 generations, while our maximum iteration was 50,000, given the time constraints. Another approach we have explored to better handle the large problem space was to provide supervision in the learning, such as modifying population parameters based on the generation, the probability and distribution of mutations, and combining different methods of mutation. Finally, the rendering aggregator library we used to paint the strokes in Python greatly limits the effects and weighting that can be applied to each brush stroke, and in the future we would like to fulfill our original goal of being able to render the brush strokes with additional effects and weighting. Images of our supervised genetic algorithm are shown in the Appendix.
+
+\section{Acknowledgements}
+Kevin Zhang and Andrew Wang worked equally on the project, splitting strategies to test. Initially, both pair programmed to get an unsupervised version to work. After the unsupervised version, both worked independently to come up with supervised strategies to beat the unsupervised model. The paper was also cowritten equally.
 
 \begin{thebibliography}{10}
 
