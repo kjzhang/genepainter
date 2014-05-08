@@ -221,14 +221,15 @@ As far as we know, background material specific to our use case of genetic algor
 \end{figure*}
 
 \section{The Genetic Painter}
-
-The strokes themselves are composed of splines with $k$ points, $h$ hue, $o$ opacity, and $t$ thickness.
+The core of our project is to implement an image painter that evolves images using a genetic algorithm. The change from Alsing's implementation is that our image building blocks are actual brush strokes, which we believe are the intuitive "building blocks" for images as paintings in particular. Additionally, the use of brush strokes was also chosen in order to achieve the desired "Impressionist" style of painting.
 
 We note that although a reasonable result was produced in Alsing's experiment, a significant amount of time was used (over 900,000 generations), most likely due to the lack of crossovers and a limited population size. As such, we were confident that by replacing polygons with brush strokes, we would be able to achieve a similar result at the very least. Consider that if we simply each brush stroke to two points and a stroke width, the strokes are effectively rectangles and hence a decent result can be expected.
 
 In other derivative works, more "proper" genetic algorithim approaches were taken such as accounting for adjustable population size, selection, DNA mixing, etc., and the approaches were able to achieve a faster convergence to the work of the Mona Lisa. However, the authors did not benchmark the amount of time necessary for a visually undiscernible image to the original to be generated. These works demonstrate our belief that adding crossovers and other improvements will result in faster convergence then Alsing's straightforward hill-climbing strategy.
 
 Finally, we would like to note that in contrast to these works we will not be mutating polygons, which causes differences in distribution of the space covered in the image. For example, even when using up to 4 to 5 points per spline, the space that we cover may be rather thin and limited. Essentially, the point while the focus of the problem remains similar, the problem space is extremely different and is presumably more difficult to evolve.
+
+\section{Modeling Paintings and Brush Strokes} The strokes themselves are composed of splines with $k$ points, $h$ hue, $o$ opacity, and $t$ thickness. TODO
 
 \section{Image Similarity}
 The $L_1$-norm and the $L_2$-norm errors are used to evaluate image similarity between two images. Given image A and image B, the fitness function for the $L_1$-norm variant would be defined as
@@ -266,7 +267,8 @@ If the condition does not hold for $T$, the PRAT of $T$ is divided into two righ
 The BTTC decomposition requires the image dimensions to be square with edge size $2^m+1$ for some $m$. If the image size is invalid, then each sides are padded by zeros to one plus the next power of two. The runtime complexity for the algorithm is an efficient $O(n \log n)$ for an image with $n$ pixels, and we demonstrate that BTTC is able to accurately choose points in areas of high curvature, since the mean squared error (MSE) is bounded by $\epsilon^2$.  For additional details on the BTTC algorithm, see \cite{distasi}.
 
 \subsection{Conclusions}
-Creating samples 
+Creating a sample set of pixels for each source image is inexpensive computationally. The randomized and uniform samples are very fast, but the recursive BTTC algorithm is more complex and depends greatly on the error threshold. Figure 3 shows a comparison of image sampling with the randomized and BTTC selection methods, and we note that the BTTC algorithm selects pixels that are better represent the salient features of the image. However, upon further investigation, image downsampling still had serious problems. First, the fitness evaluation is still too slow
+
 
 \section{Image Rendering}
 To render the image of splines, the following method were considered. For every given point in the image, we determined the closest point on each and every spline curve to the point using the methods detailed by Wang et. al \cite{wang}. Using this distance and the width of the spline, we can determine whether the pixel would have been covered by a certain spline. Testing this method via Python, we determined that over 50 splines and an image of size 256 x 256, each complete rendering of the image took approximately 3 seconds on a 4.4Ghz i-3570k. Further testing yielded that the bottleneck factor was not the $L_2$-norm being computed but rather the actual rendering of the spline. In essence, for an image of size $MN$ with $K$ splines, it required $MNK$ iterations of the composite Newton method described in the paper.
