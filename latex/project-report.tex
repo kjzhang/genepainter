@@ -229,7 +229,27 @@ In other derivative works, more "proper" genetic algorithim approaches were take
 
 Finally, we would like to note that in contrast to these works we will not be mutating polygons, which causes differences in distribution of the space covered in the image. For example, even when using up to 4 to 5 points per spline, the space that we cover may be rather thin and limited. Essentially, the point while the focus of the problem remains similar, the problem space is extremely different and is presumably more difficult to evolve.
 
-\section{Modeling Paintings and Brush Strokes} The strokes themselves are composed of splines with $k$ points, $h$ hue, $o$ opacity, and $t$ thickness. TODO
+\section{Modeling Paintings and Brush Strokes}
+
+Our general approach was to create a set of strokes $s$, each are composed by splines with $k$ points, $h$ hue, $o$ opacity, and $t$ thickness. The strokes would undergo the process of evolution as dictated by the genetic algorithm which would ultimately result in a set of improved strokes $\hat{s}$ that would resemble the original image.
+
+\subsection{Genome}
+The bottom-most representation of the genenome in this work was the stroke. The genes contained a list of points with x, y coordinates, determining each location of the sequential points for the spline curve. The number of spine points is restricted to be at least 2 (a line) than 2 but no greater than 5. We limited the number of points to be less than 5 to avoid resulting in a stroke that covered the entire image. All the points were generated via a random uniform distribution whose ranges were capped by the maximum width and maximum height of the image. Additionally, the gene contained information about the color in the standard RGB format with a range of integer values of 0 to 255 for each color. All 3 channels had their values generated initially via a random uniform distribution. To deal with the problem of layering strokes, each stroke was also assigned an alpha value to add the factor of opacity into the painting. The alpha value was contained between the values of 0.25 and 1.0. The alpha value was also generated initially via a random uniform distribution. Finally, to account for the width of the stroke, a width factor was included in the stroke. To avoid drawing too thin or too wide, the width of the stroke was generate uniformly between 5 to 15 percent of the minimum of the height and width of the image.
+
+\subsection{Population and Survival Policy}
+Unlike the Alsing work, we choose to keep both an adjustable population of adults and children. In our tests with a 256 x 256 image, we used population sizes ranging from 30 to 100 for both children and for the parents. In addition, we added a survival policy to recently mutated children to give them a competitive advantage in the testing. That is, some children, regardless of fitness, are spared from the filtering process for an adjustable period of rounds. The intuition behind employing such a policy was to prevent our program from dropping into a local minimum. The only disadvantage of the policy is the sacrificed additional resources that are necessary to keep the less fit offspring alive and allowing them to reproduce.
+
+\subsection{Mutation}
+We incorporate multiple levels of mutation to provide for the maximum level of adjustability. At the highest level, we have that each gene which is a stroke can be mutated via addition, editing, or deletion. In the case of addition which has an adjustable rate parameter, we append a completely random new stroke based on the same initial generation parameters to the DNA sequence. Given the opacity parameters, the ordering should not matter. In the case of deletion, we can choose to delete one of the genes or strokes completely from the sequence. Finally, in the case of editing, we can choose to replace the gene with a completely new gene, i.e. addition and deletion combined.
+However, we note the mutation for editing may be too drastic and hence, we have a separate level of mutations. Instead of simply changing the entire stroke, we mutate specific attributes of the stroke. This method should prove to be useful when trying to fine tune an image instead of attempting to completely start fresh. We structure the random generation by creating normal distributions centered around the current values for the locations, width, opacity, and color with an adjustable standard deviation. Essentially, instead of randomly guessing with no bias, we attempt to shift the stroke slightly and see if we can find any improvements nearby. Additionally, in this case, we can also choose to remove or add points in the spline of the stroke.
+
+\subsection{Crossovers}
+The crossoveres of the DNA were implemented in a couple of methods.
+
+First, the most naive method we chose to use was to pick two DNA strands and we uniformly randomly picked genes or strokes from both strands. Additionally, we pick one strand randomly over the other to determine the length of the strand. However, we expect such a method to yield a random data that does not significantly improve the result. That is, given that a group of strokes together are what most likely cause the fitness to do well as a whole, removing one of these from the group or merging two groups will not necessarily improve the fitness unless they are a large mutually exclusive set.
+
+The other approach we attempt is to swap out entire regions from the DNA strand in an attempt to transfer entire groups of strokes that work well together.
+We present the pseudo-code in the next section.
 
 \section{Image Similarity}
 The $L_1$-norm and the $L_2$-norm errors are used to evaluate image similarity between two images. Given image A and image B, the fitness function for the $L_1$-norm variant would be defined as
@@ -239,7 +259,10 @@ For a fitness function of the $L_2$-norm error, we have
 \[ \sum\limits_{i,j} (A_{i,j} - B_{i,j})^2 \]
 which puts greater weights on larger pixel offsets. While we did try using both metrics for evaluating similarity, we can intuitively see why most image processing algorithms use the $L_2$-norm. Instead of weighting all offsets equally, larger outliers are more heavily penalized. For example, an image that is consistently off by one shade of red throughout the entire image is preferable to an image that has a large color offset for a small region of the image. The idea is that optimizing for error in the $L_2$-norm preserves the salient features of the source image and is appropriate when a one-to-one mapping exists between pixels of the sample and source images. Additionally, the $L_2$-norm and RMSE as used in our application is similar to peak signal-to-noise ratio, which evaluates the accuracy of a lossy method for reconstructing signals. Other image similarity metrics were considered, such as normalized color histograms, but the focus was mostly on the implementing and refining our model.
 
-\section{Image Rendering} TODO
+\section{Image Rendering}
+We explored various methods of rendering the complete image from a list of stroke genomes. The original method was, for every given point in the image, determine the closest point on each and every spline curve to the point using the methods detailed by Wang et. al \cite{wang}. Using this distance and the width of the spline, we can determine whether the pixel would have been covered by a certain spline. In essence, we are computing the Hausdorff metric between the space of pixels on the image and the points on the spline curve. In our implementation, we determined that an image of 100 splines and size 256 x 256, took approximately 3 seconds on an Intel  4.4Ghz i-3570k processor. Further testing yielded that the bottleneck factor was not the $L_2$-norm being computed but rather the actual rendering of the spline. In essence, for an image of size $MN$ with $K$ splines, it required $MNK$ iterations of the composite Newton method described in the paper. For our purposes, the rendering was drastically too slow to generate any reasonable number of generations in the the project time frame, with each generation taking over a minute to compute. We also explored image downsampling techniques, which are outlined in the following section.
+
+The next approach to achieve rendering in a computatably feasible manner was to draw the splines and then morphologically dilate the pixels of the spline. While the method appears to have the same worst case performance, we achieved some speedup, although the overall computation was still too slow. Finally we used a rendering aggregator to still , the rendering was achieved in approximately 0.01 seconds. Specifically, we chose to use the $RenderAgg$ package from the matplotlib python library. We deemed that this computation time was sufficient for our purposes.
 
 \section{Image Sampling}
 Computing the Hausdorff distance between each spline and each pixel coordinate in the image was too computationally expensive. Thus, we explored computing fitness on a subset of pixels within the evolved and source image as an approximation metric,which lowers the computation costs, since the most expensive step is the fitness computation for each new or mutated image genome. However, in order to accurately sample the image, a subset of $n_p$ pixels that can accurately summarize the salient features within the image is required.
@@ -266,42 +289,20 @@ If the condition does not hold for $T$, the PRAT of $T$ is divided into two righ
 
 The BTTC decomposition requires the image dimensions to be square with edge size $2^m+1$ for some $m$. If the image size is invalid, then each sides are padded by zeros to one plus the next power of two. The runtime complexity for the algorithm is an efficient $O(n \log n)$ for an image with $n$ pixels, and we demonstrate that BTTC is able to accurately choose points in areas of high curvature, since the mean squared error (MSE) is bounded by $\epsilon^2$.  For additional details on the BTTC algorithm, see \cite{distasi}.
 
+\begin{figure*}[!htb]
+\begin{center}
+\includegraphics[width=2in]{lena512.png}\qquad
+\includegraphics[width=2in]{lena512-random-mask-1.png}\qquad
+\includegraphics[width=2in]{lena512-bttc-mask-1.png}
+\caption{Random vs. BTTC sample selection. For lena512.png, both images are sampled at $\approx 7.62\%$ of the total pixel count. The left image is generated with uniform random sampling. For BTTC on the right, we chose $\epsilon = 0.15$. Note that the BTTC implementation selects dense clusters of points along important edge features in the image, while areas with minor gradients have relatively sparse sampling.}
+\label{bttcselectionfig}
+\end{center}
+\end{figure*}
+
 \subsection{Conclusions}
-Creating a sample set of pixels for each source image is inexpensive computationally. The randomized and uniform samples are very fast, but the recursive BTTC algorithm is more complex and depends greatly on the error threshold. Figure 3 shows a comparison of image sampling with the randomized and BTTC selection methods, and we note that the BTTC algorithm selects pixels that are better represent the salient features of the image. However, upon further investigation, image downsampling still had serious problems. First, the fitness evaluation is still too slow
+Creating a sample set of pixels for each source image is inexpensive computationally. The randomized and uniform samples are very fast, but the recursive BTTC algorithm is more complex and depends greatly on the error threshold, although the BTTC tree only needs to be computed once per run. Figure 3 shows a comparison of image sampling with the randomized and BTTC selection methods, and we note that the BTTC algorithm selects pixels that are better represent the salient features of the image.
 
-
-\section{Image Rendering}
-To render the image of splines, the following method were considered. For every given point in the image, we determined the closest point on each and every spline curve to the point using the methods detailed by Wang et. al \cite{wang}. Using this distance and the width of the spline, we can determine whether the pixel would have been covered by a certain spline. Testing this method via Python, we determined that over 50 splines and an image of size 256 x 256, each complete rendering of the image took approximately 3 seconds on a 4.4Ghz i-3570k. Further testing yielded that the bottleneck factor was not the $L_2$-norm being computed but rather the actual rendering of the spline. In essence, for an image of size $MN$ with $K$ splines, it required $MNK$ iterations of the composite Newton method described in the paper.
-
-The next approach to achieve rendering in a computatably feasible manner was to draw the splines and then dilate the pixels of the spline. While it appears to have the same worst case performance, through the use of optimized packages, the rendering was achieved in approximately 0.01 seconds. Specifically, we chose to use the $RenderAgg$ package from the matplotlib python library. We deemed that this computation time was sufficient for our purposes. 
-
-\section{General Approach}
-Our general approach was to create a set of strokes $s$, each which represented a spline with a certain width, color, and opacity. These strokes would undergo the process of evolution as dictated by the genetic algorithm which would ultimately result in a set of improved strokes $\hat{s}$ that would resemble the original image.
-
-\subsection{Genes}
-The representation of the genes in this work was the stroke. These genes contained a list of points with x,y coordinates, determining each location of a sequential point for the spline. We restricted the number of points to be greater than 2 but less than 5. In the case that the points numbered from 2 to 3, the points did not actually form a spline and as a result, were connected via a straight line. We limited the number of points to be less than 5 to avoid resulting in a stroke that covered the entire image. All the points were generated via a random uniform distribution whose ranges were capped by the maximum width and maximum height of the image.  Additionally, the gene contained information about the color in the standard RGB format with a range of integer values of 0 to 255 for each color. All 3 channels had their values generated initially via a random uniform distribution. To deal with the problem of layering strokes, each stroke was also assigned an alpha value to add the factor of opacity into the painting. The alpha value was contained between the values of 0.25 and 1.0. The alpha value was also generated initially via a random uniform distribution. Finally, to account for the width of the stroke, a width factor was included in the stroke. To avoid drawing too thin or too wide, the width of the stroke was generate uniformly between 5 to 15 percent of the minimum of the height and width of the image.
-
-We present the pseudo-code in the next section.
-
-\subsection{Population and Survival Policy}
-Unlike the Alsing work, we choose to keep both an adjustable population of adults and children. In our tests with a 256 x 256 image, we used population sizes ranging from 30 to 100 for both children and for the parents. In addition, we added a survival policy to recently mutated children to give them a competitive advantage in the testing. That is, some children, regardless of fitness, are spared from the filtering process for an adjustable period of rounds. The intuition behind employing such a policy was to prevent our program from dropping into a local minimum. The only disadvantage of the policy is the sacrificed additional resources that are necessary to keep the less fit offspring alive and allowing them to reproduce.
-
-We present the pseudo-code in the next section.
-
-\subsection{Mutation}
-We incorporate multiple levels of mutation to provide for the maximum level of adjustability. At the highest level, we have that each gene which is a stroke can be mutated via addition, editing, or deletion. In the case of addition which has an adjustable rate parameter, we append a completely random new stroke based on the same initial generation parameters to the DNA sequence. Given the opacity parameters, the ordering should not matter. In the case of deletion, we can choose to delete one of the genes or strokes completely from the sequence. Finally, in the case of editing, we can choose to replace the gene with a completely new gene, i.e. addition and deletion combined.
-However, we note the mutation for editing may be too drastic and hence, we have a separate level of mutations. Instead of simply changing the entire stroke, we mutate specific attributes of the stroke. This method should prove to be useful when trying to fine tune an image instead of attempting to completely start fresh. We structure the random generation by creating normal distributions centered around the current values for the locations, width, opacity, and color with an adjustable standard deviation. Essentially, instead of randomly guessing with no bias, we attempt to shift the stroke slightly and see if we can find any improvements nearby. Additionally, in this case, we can also choose to remove or add points in the spline of the stroke.
-
-We present the pseudo-code in the next section.
-
-
-\subsection{Crossovers}
-The crossoveres of the DNA were implemented in a couple of methods.
-
-First, the most naive method we chose to use was to pick two DNA strands and we uniformly randomly picked genes or strokes from both strands. Additionally, we pick one strand randomly over the other to determine the length of the strand. However, we expect such a method to yield a random data that does not significantly improve the result. That is, given that a group of strokes together are what most likely cause the fitness to do well as a whole, removing one of these from the group or merging two groups will not necessarily improve the fitness unless they are a large mutually exclusive set.
-
-The other approach we attempt is to swap out entire regions from the DNA strand in an attempt to transfer entire groups of strokes that work well together.
-We present the pseudo-code in the next section.
+However, upon further investigation, image downsampling still had serious problems.First, the fitness evaluation is still too slow; a 7 percent sub-sample using the BTTC algorithm essential reduces the new run time to 7 percent of the original run time. With a population of 100 images, a useful number of generations cannot be computed within a reasonable time frame. Additionally, we note that although BTTC should get the most salient pixels of the image, we noticed that areas with sparse sub samples were populated by "junk" brush strokes even though the complex feature areas performed better. Intuitively, we can see why the observation is unsurprising, since the lack of sample pixels means large swaths of inaccurate data could be overlooked.
 
 \section{Implementation}
 We detail our actual implementation below.
@@ -454,8 +455,44 @@ stuff
 \[ \includegraphics[scale=0.22]{../figure_1.png} \includegraphics[scale=0.20]{../figure_2.png} \]
 Here, we have two results for running our 
 
+\begin{figure*}[!htb]
+\begin{center}
+\includegraphics[width=2in]{./img/lena256.png}\qquad
+\includegraphics[width=2in]{./img/lenaLI_0.png}\qquad
+\includegraphics[width=2in]{./img/lenaLI_25.png}\\
+\includegraphics[width=2in]{./img/lenaLI_50.png}\qquad
+\includegraphics[width=2in]{./img/lenaLI_100.png}\qquad
+\includegraphics[width=2in]{./img/lenaLI_200.png}\\
+\includegraphics[width=2in]{./img/lenaLI_400.png}\qquad
+\includegraphics[width=2in]{./img/lenaLI_800.png}\qquad
+\includegraphics[width=2in]{./img/lenaLI_1600.png}\\
+\includegraphics[width=2in]{./img/lenaLI_3200.png}\qquad
+\includegraphics[width=2in]{./img/lenaLI_6400.png}\qquad
+\includegraphics[width=2in]{./img/lenaLI_7050.png}\\
+\caption{PDE image interpolation using linear isotropic diffusion. Image lena256.png (top left) is compressed using BTTC with $\epsilon = 0.2$ to $\approx 13.5\%$ of the total pixel count (top middle).  The image interpolation then evolves and is plotted at 10 iterations $k=\{25,50,100,200,400,800,1600,3200,6400,7050\}$.  These time steps are displayed starting from the top right.  The stability threshold for the algorithm is reached after 7050 iterations, so the bottom left picture gives the final result. The three diffusion methods have a similar convergence path, although the convergence speeds vary.}
+\label{evolutionfig}
+\end{center}
+\end{figure*}
 
-
+\pagebreak
+\begin{figure*}[!htb]
+\begin{center}
+\includegraphics[width=2in]{./img/lena256.png}\qquad
+\includegraphics[width=2in]{./img/lenaLI_0.png}\qquad
+\includegraphics[width=2in]{./img/lenaLI_25.png}\\
+\includegraphics[width=2in]{./img/lenaLI_50.png}\qquad
+\includegraphics[width=2in]{./img/lenaLI_100.png}\qquad
+\includegraphics[width=2in]{./img/lenaLI_200.png}\\
+\includegraphics[width=2in]{./img/lenaLI_400.png}\qquad
+\includegraphics[width=2in]{./img/lenaLI_800.png}\qquad
+\includegraphics[width=2in]{./img/lenaLI_1600.png}\\
+\includegraphics[width=2in]{./img/lenaLI_3200.png}\qquad
+\includegraphics[width=2in]{./img/lenaLI_6400.png}\qquad
+\includegraphics[width=2in]{./img/lenaLI_7050.png}\\
+\caption{PDE image interpolation using linear isotropic diffusion. Image lena256.png (top left) is compressed using BTTC with $\epsilon = 0.2$ to $\approx 13.5\%$ of the total pixel count (top middle).  The image interpolation then evolves and is plotted at 10 iterations $k=\{25,50,100,200,400,800,1600,3200,6400,7050\}$.  These time steps are displayed starting from the top right.  The stability threshold for the algorithm is reached after 7050 iterations, so the bottom left picture gives the final result. The three diffusion methods have a similar convergence path, although the convergence speeds vary.}
+\label{evolutionfig}
+\end{center}
+\end{figure*}
 
 \section{Conclusion}
 asdf
