@@ -396,7 +396,7 @@ class GenePainter(object):
 
             if num_iter > 100 and error_change > 0:
                 for z in xrange(10):
-                    dump_dna(self.population[0].strokes, str(num_iter) + '-' + str(z) + '.txt')
+                    dump_dna(self.population[0].strokes, sys.argv[1] + '-' + str(num_iter) + '-' + str(z) + '.txt')
 
         for z in xrange(10):
             dump_dna(self.population[0].strokes, str(z) + '.txt')

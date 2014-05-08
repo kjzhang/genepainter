@@ -203,7 +203,7 @@ class GenePainter(object):
 
             if error_change > 0.0:
                 for z in xrange(10):
-                    dump_dna(self.population[0].strokes, 'original-' + str(num_iter) + '-' + str(z) + str(np.random.random()) + '.txt')
+                    dump_dna(self.population[0].strokes, 'original-' + sys.argv[1] + '-' + str(num_iter) + '-' + str(z) + str(np.random.random()) + '.txt')
 
         plt.imshow(self.population[0].render(), interpolation='none')
         plt.show()

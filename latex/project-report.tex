@@ -123,7 +123,7 @@
 %	TITLE AND AUTHORS
 %----------------------------------------------------------------------------------------
 
-\title{Genetic Algorithms } % For titles, only capitalize the first letter
+\title{Genetic Algorithms in Painting} % For titles, only capitalize the first letter
 
 %------------------------------------------------
 
@@ -168,9 +168,7 @@ Kevin Zhang\affil{2}{kzhang@college.harvard.edu}}
 %----------------------------------------------------------------------------------------
 
 \begin{abstract}
-We review the mathematical basis behind PDE-based image editing, focusing on methods of image interpolation for inpainting, including smoothing, linear diffusion, and nonlinear diffusion. Additionally, we implement a PDE-based image compression and decompression scheme. We investigate random sampling and a recursive tree-based sampling method for selecting pixels to decompress.
-
-
+ABSTRACT
 \end{abstract}
 
 %------------------------------------------------
@@ -197,7 +195,7 @@ We review the mathematical basis behind PDE-based image editing, focusing on met
 
 \section{Introduction}
 
-\dropcap{O}ne of the most popular fields of image processing is the field of applying filters to images to render a different look or feeling. Popularized by Photoshop and Instagram, most of these filters concentrate and focus on things such as changing the contrast, exposure, or rendering the entire image in a different style. However, these algorithms often require fine tuning and in the cases of more artistic filters, are unable to provide a sense of realism as to how the piece was produced. In particular, in this paper we are interested in designing and testing an algorithm that attempts to tackle the problem of rendering photos in an impressionist manner like the works of Monet, Renoir, etc.  The impressionist paintings are distinct in that they use relatively small and thin brush strokes to depict the entire painting. These strokes are very visible on the painting and create an atmosphere of open composition which depicts light in expression over time.
+\dropcap{O}ne common application of image processing is the application of filters to images in order to render the original image in a different style. Popularized by Photoshop and Instagram, many of these filters concentrate and focus on simple properties such as modifying the contrast, exposure, or can even render the entire image in a different style. However, such algorithms often require fine tuning, and in the case of the more "artistic" filters, are unable to provide a sense of realism in how the piece was originally produced. In particular, in this paper we are interested in designing and testing an algorithm that attempts to tackle the problem of rendering photos in an impressionist manner like the works of Monet, Renoir, etc.  The impressionist paintings are distinct in that they use relatively small and thin brush strokes to depict the entire painting. These strokes are very visible on the painting and create an atmosphere of open composition which depicts light in expression over time.
 
 %The most popular lossy compression approach for images uses wavelet or discrete cosine transforms.  
 Hence, the project that we are interested in pursuing is creating impressionist versions of drawings through a genetic algorithm. Given an image, we would like to find the best matching image composed of $n$ strokes. The strokes themselves are composed of splines with $k$ points, $h$ hue, $o$ opacity, and $t$ thickness. The fitness function $f$ would then measure how different the variant (or child) is from the actual image. A simple example of such a variant would be $f$ that calcualtes the $L_2$-norm of the actual and evolved image.
