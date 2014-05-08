@@ -184,7 +184,7 @@ ABSTRACT
 %% octadecyltrichlorosilane}
 
 % \abbreviations{}
-\abbreviations{BTTC, B-tree triangular coding; MSE, mean-squared error}
+% \abbreviations{BTTC, B-tree triangular coding; MSE, mean-squared error}
 
 %----------------------------------------------------------------------------------------
 %	PUBLICATION CONTENT
@@ -195,12 +195,12 @@ ABSTRACT
 
 \section{Introduction}
 
-\dropcap{O}ne common application of image processing is the application of various filters to images. Popularized by applications such as Photoshop and Instagram, many of these filters concentrate and focus on simple properties such as modifying the contrast, exposure, but others can even render the entire image in a different style. However, such algorithms often require fine tuning, and in the case of the more "artistic" filters, are unable to provide a sense of realism reflecting how the piece was originally produced. In particular, we are interested in designing and evaluating a method that attempts to tackle the problem of rendering photos with Impressionist properties as seen in the works of Monet, Renoir, etc. The style of impressionist paintings is distinct in that relatively small and thin brush strokes come together as a whole to create a coherent, global painting. The structure of the strokes is very visible on the painting and create an atmosphere of open composition which depicts light in expression over time. Hence, the goal of our project is to create impressionist versions of arbitrary images through a genetic algorithm. Given a target image, we would like to evolve a matching image composed of a set of simulated brush strokes.  The benchmark for fitness would correspond to the difference between the evolved image and the actual target image. An example metric for fitness would be the $L_2$-norm error between the two images.
+\dropcap{O}ne common application of image processing is the application of various filters to images. Popularized by applications such as Photoshop and Instagram, many of these filters concentrate and focus on simple properties such as modifying the contrast, exposure, but others can even render the entire image in a different style. However, such algorithms often require fine tuning, and in the case of the more "artistic" filters, are unable to provide a sense of realism reflecting how the piece was originally produced. In particular, we are interested in designing and evaluating a method that attempts to tackle the problem of rendering photos with Impressionist properties as seen in the works of Monet, Renoir, etc. The style of impressionist paintings is distinct in that relatively small and thin brush strokes come together as a whole to create a coherent, global painting. The structure of the strokes is very visible on the painting and create an atmosphere of open composition which depicts light in expression over time.
 
-While the given fitness function would suggest that the evolved image should closely match the source image, we hypothesize that with our image model and by limiting the total number of strokes within the image, we can achieve an effect similar to that of Impressionist paintings.
+Hence, the goal of our project is to create impressionist versions of arbitrary images through a genetic algorithm. Given a target image, we would like to evolve a matching image composed of a set of simulated brush strokes.  The benchmark for fitness would correspond to the difference between the evolved image and the actual target image. An example metric for fitness would be the $L_2$-norm error between the two images. While the given fitness function would suggest that the evolved image should closely match the source image, we hypothesize that with our image model and by limiting the total number of strokes within the image, we can achieve an effect similar to that of Impressionist paintings.
 
 \section{Background and Related Work}
-As far as we know, background material specific to our use case of genetic algorithms is sparse. Our original inspiration for the project primarily comes from a blog post, Genetic Programming: Evolution of Mona Lisa, by Roger Alsing \cite{alsing},  and subsequent derivated works. Essentially, Alsing's image model is a series of polygons, which are encoded as a DNA string, with each gene representing a polygon with specified color and opacity, and the DNA string is continuously mutated in order to evolve the image closer to the target. At each step, the mutated child would be compared to the actual image, with the $L_2$-norm being the fitness function, the child would replace the parent if the child were more fit. The simple process yielded a fairly acceptable rendering of the Mona Lisa with minor artifacts, as shown in Figure 1. We note that Alsing's Mona Lisa is a trivial usage of genetic algorithms, since the population consisted of a single individual. A single image was mutated closer to the actual image with each randomized step, so the algorithm appears to be more similar to hill-climbing. We believe that by using a larger population and incorporating methods for genetic crossover, an optimum can be reached in much fewer steps, although the computational complexity will increase.
+As far as we know, background material specific to our use case of genetic algorithms is sparse. Our original inspiration for the project primarily comes from a blog post, Genetic Programming: Evolution of Mona Lisa, by Roger Alsing \cite{alsing}, and subsequent derivated works. Essentially, Alsing's image model is a series of polygons, which are encoded as a DNA string, with each gene representing a polygon with specified color and opacity, and the DNA string is continuously mutated in order to evolve the image closer to the target. At each step, the mutated child would be compared to the actual image, with the $L_2$-norm being the fitness function, the child would replace the parent if the child were more fit. The simple process yielded a fairly acceptable rendering of the Mona Lisa with minor artifacts, as shown in Figure 1. We note that Alsing's Mona Lisa is a trivial usage of genetic algorithms, since the population consisted of a single individual. A single image was mutated closer to the actual image with each randomized step, so the algorithm appears to be more similar to hill-climbing. We believe that by using a larger population and incorporating methods for genetic crossover, an optimum can be reached in much fewer steps, although the computational complexity will increase.
 
 \begin{figure*}[!htb]
 \begin{center}
@@ -211,72 +211,15 @@ As far as we know, background material specific to our use case of genetic algor
 \end{center}
 \end{figure*}
 
-We note that although a reasonable result was produced in Alsing's experiment, a significant amount of time was used (over 900,000 generations), most likely due to the lack of crossovers and a limited population size. As such, we were confident that by replacing polygons with brush strokes, we would be able to achieve a similar result at the very least. Consider that if we simply each brush stroke to two points and a stroke width, the strokes are effectively rectangles and hence a decent result can be expected.
-
-In other derivative works, more "proper" genetic algorithim approaches were taken such as accounting for adjustable population size, selection, DNA mixing, etc., and the approaches were able to achieve a faster convergence to the work of the Mona Lisa. However, the authors did not benchmark the amount of time necessary for a visually undiscernible image to the original to be generated. These works demonstrate our belief that adding crossovers and other improvements will result in faster convergence then Alsing's straightforward hill-climbing strategy.
-
-Finally, we would like to note that in contrast to these works we will not be mutating polygons. This differents in the uniformity of space covered as well as the distribution of the space. For example, given that we choose to use less than 4 to 5 points per spline, the space that we cover may be rather thin and limited. Essentially, the point we would like to elaborate is that while the focus of the problem remains similar, the problem space is extremely different.
-
 \section{The Genetic Painter}
 
 The strokes themselves are composed of splines with $k$ points, $h$ hue, $o$ opacity, and $t$ thickness.
 
-\section{Sampling for image compression}
+We note that although a reasonable result was produced in Alsing's experiment, a significant amount of time was used (over 900,000 generations), most likely due to the lack of crossovers and a limited population size. As such, we were confident that by replacing polygons with brush strokes, we would be able to achieve a similar result at the very least. Consider that if we simply each brush stroke to two points and a stroke width, the strokes are effectively rectangles and hence a decent result can be expected.
 
-In order to compress the image, we will need to select a subset of $n_p$ pixels that will then be used to reconstruct the image.  Two naive approaches are to select $n_p$ pixels in a uniform grid or to select $n_p$ random pixels from the image. However, these approaches are inefficient as many of the chosen pixels will be located in areas without important features. Instead, selecting pixels from edges within the image where the color gradient is changing quickly is more efficient, since those features must be identified to accurately reconstruct the image.  However, storing store all the edges is impractical, so we will therefore look for corners, i.e. the points where the edges change the most. The resulting sample set will be the pixels that represent the most change in the image.
+In other derivative works, more "proper" genetic algorithim approaches were taken such as accounting for adjustable population size, selection, DNA mixing, etc., and the approaches were able to achieve a faster convergence to the work of the Mona Lisa. However, the authors did not benchmark the amount of time necessary for a visually undiscernible image to the original to be generated. These works demonstrate our belief that adding crossovers and other improvements will result in faster convergence then Alsing's straightforward hill-climbing strategy.
 
-\subsection{B-tree triangular coding}
-To identify the important corners within the image, we implement binary-tree triangular coding (BTTC), developed by Distasi et al \cite{distasi}, which recursively decomposes the image into right-angled triangles. The BTTC algorithm represents an image $u$ as a surface $A = \{(x,y,c) | c = u(x,y)\}$.  The goal is to approximate $A$ by a discrete surface $B = \{(x,y,d) | d = G(x,y)\}$ with a finite-set of polyhedrons.  Each polyhedron has a right-angle triangle on the XY plane (PRAT) and an upper face right-angle triangle approximating $A$ (URAT).
-
-As illustration, let $T$ be a PRAT of vertices $P_1 = (x_1,y_1)$, $P_2 = (x_2, y_2)$, and $P_3 = (x_3,y_3)$.  If $c_i = u(x_i,y_i)$, then the $(x_i, y_i, c_i)$ are points in $A$ for $i=\{1,2,3\}$ that define the URAT associated with $T$.  BTTC then approximates $u$ within $T$ with the function $G$ that uses linear interpolation
-\begin{equation}
-G(x,y) = c_1 + \alpha(c_2 - c_1) + \beta(c_3 -c_1)
- \label{G}
-\end{equation}
-where $\alpha$ and $\beta$ are defined as
-$$\alpha = \frac{(x-x_1)(y_3 - y_1) - (y-y_1)(x_3-x_1)}{(x_2-x_1)(y_3 - y_1) - (y_2-y_1)(x_3-x_1)}$$
-$$\beta = \frac{(x_2-x_1)(y - y_1) - (y_2-y_1)(x-x_1)}{(x_2-x_1)(y_3 - y_1) - (y_2-y_1)(x_3-x_1)}$$
-The approximation has error defined as distance between $u(x,y) \in \mathbb{R}^3$ and $G(x,y)\in \mathbb{R}^3$
-$$\text{err}(x,y) = ||u(x,y) - G(x,y)||_2$$
-and we determine if the approximation is sufficient with a error condition based on threshold $\epsilon > 0$
-$$\text{err}(x,y) \leq \epsilon$$
-
-If the condition does not hold for $T$, the PRAT of $T$ is divided into two right-angle triangles.  The subdivision procedure is reiterated until the condition holds for all PRATs, and the resulting structure is a binary-tree where each node represents a triangle with either two or zero children.\\
-
-The overall algorithm for BTTC is as follows:
-\begin{enumerate}
-\item \emph{Initialize the set of PRATS}. 
-
-Set $L = \emptyset$.
-\item \emph{Intialize the first two PRATS}. 
-
-Set $T_1 = \{(1,1),(1,m),(m,1)\}$ and 
-
-$T_2 = \{(m,m),(m,1),(1,m)\}$
-\item Push $T_1$ and $T_2$ onto the stack.
-\item Pop the PRAT $T$ from the stack, with vertices\\
-$P_1 = (x_1,y_1)$, $P_2 = (x_2, y_2)$, and $P_3 = (x_3,y_3)$.
-
-Set $c_i = u(x_i,y_i)$ to define the URAT of $T$.
-
-\item For each point $(x,y) \in T$, calculate $G(x,y)$ and $err(x,y)$.
-
-If $err(x,y) \leq \varepsilon$ for all points, go to step 7.
-
-\item \emph{Divide $T$ into two PRATs}
-
-Set $P_M = (P_2 + P_3)/2$.
-
-Set $T_1 = \{P_M, P_1, P_2\}$ and $T_2 = \{P_M,P_3,P_1\}$.
-
-Go to step 3.
-
-\item Insert $T$ into $L$.
-
-\item If the stack is empty, then stop.  Otherwise, go to Step 4.
-\end{enumerate}
-
-The algorithm requires the image dimensions to be square with edge size $2^m+1$ for some $m$. If the image size is invalid, then each sides are padded by zeros to one plus the next power of two. The runtime complexity for the algorithm is an efficient $O(n \log n)$ for an image with $n$ pixels, and we demonstrate that BTTC is able to accurately choose points in areas of high curvature, since the mean squared error (MSE) is bounded by $\epsilon^2$.  For additional details, see \cite{distasi}.
+Finally, we would like to note that in contrast to these works we will not be mutating polygons, which causes differences in distribution of the space covered in the image. For example, even when using up to 4 to 5 points per spline, the space that we cover may be rather thin and limited. Essentially, the point while the focus of the problem remains similar, the problem space is extremely different and is presumably more difficult to evolve.
 
 \section{Image Similarity}
 The $L_1$-norm and the $L_2$-norm errors are used to evaluate image similarity between two images. Given image A and image B, the fitness function for the $L_1$-norm variant would be defined as
@@ -285,6 +228,36 @@ which intuitively means that the fitness function accounts for total absolute er
 For a fitness function of the $L_2$-norm error, we have
 \[ \sum\limits_{i,j} (A_{i,j} - B_{i,j})^2 \]
 which puts greater weights on larger pixel offsets. While we did try using both metrics for evaluating similarity, we can intuitively see why most image processing algorithms use the $L_2$-norm. Instead of weighting all offsets equally, larger outliers are more heavily penalized. For example, an image that is consistently off by one shade of red throughout the entire image is preferable to an image that has a large color offset for a small region of the image. The idea is that optimizing for error in the $L_2$-norm preserves the salient features of the source image and is appropriate when a one-to-one mapping exists between pixels of the sample and source images. Additionally, the $L_2$-norm and RMSE as used in our application is similar to peak signal-to-noise ratio, which evaluates the accuracy of a lossy method for reconstructing signals. Other image similarity metrics were considered, such as normalized color histograms, but the focus was mostly on the implementing and refining our model.
+
+\section{Image Rendering} TODO
+
+\section{Image Sampling}
+Computing the Hausdorff distance between each spline and each pixel coordinate in the image was too computationally expensive. Thus, we explored computing fitness on a subset of pixels within the evolved and source image as an approximation metric,which lowers the computation costs, since the most expensive step is the fitness computation for each new or mutated image genome. However, in order to accurately sample the image, a subset of $n_p$ pixels that can accurately summarize the salient features within the image is required.
+
+\subsection{Naive Sampling} Two simple approaches are to select $n_p$ pixels in a uniform grid or to select $n_p$ random pixels from the image. However, these methods are inefficient as many of the chosen pixels will be located in homogenous areas without important features. Instead, selecting pixels from edges within the image where the color gradient is changing quickly is more efficient, since those features must be identified to accurately reconstruct the image.  However, simply all the edges is impractical, so we will therefore look for corners, i.e. the points where the edges change the most. The resulting sample set will be the pixels that represent the most change in the image.
+
+\subsection{B-tree Triangular Coding}
+To identify the important corners within the image, we implement a popular algorithm used in image compression called binary-tree triangular coding (BTTC), developed by Distasi et al. \cite{distasi}, which recursively decomposes the image into right-angled triangles. The BTTC algorithm represents an image $u$ as a surface $A = \{(x,y,c) | c = u(x,y)\}$.  The goal is to approximate $A$ by a discrete surface $B = \{(x,y,d) | d = G(x,y)\}$ with a finite-set of polyhedrons.  Each polyhedron has a right-angle triangle on the XY plane (PRAT) and an upper face right-angle triangle approximating $A$ (URAT).
+
+As illustration, let $T$ be a PRAT of vertices $P_1 = (x_1,y_1)$, $P_2 = (x_2, y_2)$, and $P_3 = (x_3,y_3)$.  If $c_i = u(x_i,y_i)$, then the $(x_i, y_i, c_i)$ are points in $A$ for $i=\{1,2,3\}$ that define the URAT associated with $T$.  BTTC then approximates $u$ within $T$ with the function $G$ that uses linear interpolation,
+\begin{equation}
+G(x,y) = c_1 + \alpha(c_2 - c_1) + \beta(c_3 -c_1)
+ \label{G}
+\end{equation}
+where $\alpha$ and $\beta$ are defined as,
+$$\alpha = \frac{(x-x_1)(y_3 - y_1) - (y-y_1)(x_3-x_1)}{(x_2-x_1)(y_3 - y_1) - (y_2-y_1)(x_3-x_1)}$$
+$$\beta = \frac{(x_2-x_1)(y - y_1) - (y_2-y_1)(x-x_1)}{(x_2-x_1)(y_3 - y_1) - (y_2-y_1)(x_3-x_1)}$$
+The approximation has error defined as distance between $u(x,y) \in \mathbb{R}^3$ and $G(x,y)\in \mathbb{R}^3$,
+$$\text{err}(x,y) = ||u(x,y) - G(x,y)||_2$$
+and we determine if the approximation is sufficient with a error condition based on threshold $\epsilon > 0$,
+$$\text{err}(x,y) \leq \epsilon$$
+
+If the condition does not hold for $T$, the PRAT of $T$ is divided into two right-angle triangles.  The subdivision procedure is reiterated until the condition holds for all PRATs, and the resulting structure is a binary-tree where each node represents a triangle with either two or zero children.
+
+The BTTC decomposition requires the image dimensions to be square with edge size $2^m+1$ for some $m$. If the image size is invalid, then each sides are padded by zeros to one plus the next power of two. The runtime complexity for the algorithm is an efficient $O(n \log n)$ for an image with $n$ pixels, and we demonstrate that BTTC is able to accurately choose points in areas of high curvature, since the mean squared error (MSE) is bounded by $\epsilon^2$.  For additional details on the BTTC algorithm, see \cite{distasi}.
+
+\subsection{Conclusions}
+Creating samples 
 
 \section{Image Rendering}
 To render the image of splines, the following method were considered. For every given point in the image, we determined the closest point on each and every spline curve to the point using the methods detailed by Wang et. al \cite{wang}. Using this distance and the width of the spline, we can determine whether the pixel would have been covered by a certain spline. Testing this method via Python, we determined that over 50 splines and an image of size 256 x 256, each complete rendering of the image took approximately 3 seconds on a 4.4Ghz i-3570k. Further testing yielded that the bottleneck factor was not the $L_2$-norm being computed but rather the actual rendering of the spline. In essence, for an image of size $MN$ with $K$ splines, it required $MNK$ iterations of the composite Newton method described in the paper.
@@ -483,7 +456,10 @@ Roger Alsing, {\em Genetic Programming: Evolution of Mona Lisa}, http://rogerals
 
 \bibitem{wang}
 Hongling Wang, Joseph Kearney, and Kendall Atkinson, {\em Robust and Efficient Computation of the Closest Point on a Spline Curve}, Dept. of Computer Science, The University of Iowa, (2002).
-  
+
+\bibitem{distasi}
+R.~Distasi, M.~Nappi, and S.~Virtulano, {\em Image Compression by {BTTC}-Tree Triangular Coding}, IEEE Transactions on Communication, 45, 9 (1997).
+
 \end{thebibliography}
 
 %----------------------------------------------------------------------------------------
