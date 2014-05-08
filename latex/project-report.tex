@@ -195,22 +195,31 @@ ABSTRACT
 
 \section{Introduction}
 
-\dropcap{O}ne common application of image processing is the application of filters to images in order to render the original image in a different style. Popularized by Photoshop and Instagram, many of these filters concentrate and focus on simple properties such as modifying the contrast, exposure, or can even render the entire image in a different style. However, such algorithms often require fine tuning, and in the case of the more "artistic" filters, are unable to provide a sense of realism in how the piece was originally produced. In particular, in this paper we are interested in designing and testing an algorithm that attempts to tackle the problem of rendering photos in an impressionist manner like the works of Monet, Renoir, etc.  The impressionist paintings are distinct in that they use relatively small and thin brush strokes to depict the entire painting. These strokes are very visible on the painting and create an atmosphere of open composition which depicts light in expression over time.
+\dropcap{O}ne common application of image processing is the application of various filters to images. Popularized by applications such as Photoshop and Instagram, many of these filters concentrate and focus on simple properties such as modifying the contrast, exposure, but others can even render the entire image in a different style. However, such algorithms often require fine tuning, and in the case of the more "artistic" filters, are unable to provide a sense of realism reflecting how the piece was originally produced. In particular, we are interested in designing and evaluating a method that attempts to tackle the problem of rendering photos with Impressionist properties as seen in the works of Monet, Renoir, etc. The style of impressionist paintings is distinct in that relatively small and thin brush strokes come together as a whole to create a coherent, global painting. The structure of the strokes is very visible on the painting and create an atmosphere of open composition which depicts light in expression over time. Hence, the goal of our project is to create impressionist versions of arbitrary images through a genetic algorithm. Given a target image, we would like to evolve a matching image composed of a set of simulated brush strokes.  The benchmark for fitness would correspond to the difference between the evolved image and the actual target image. An example metric for fitness would be the $L_2$-norm error between the two images.
 
-%The most popular lossy compression approach for images uses wavelet or discrete cosine transforms.  
-Hence, the project that we are interested in pursuing is creating impressionist versions of drawings through a genetic algorithm. Given an image, we would like to find the best matching image composed of $n$ strokes. The strokes themselves are composed of splines with $k$ points, $h$ hue, $o$ opacity, and $t$ thickness. The fitness function $f$ would then measure how different the variant (or child) is from the actual image. A simple example of such a variant would be $f$ that calcualtes the $L_2$-norm of the actual and evolved image.
-
-While the given fitness function would suggest that the evolved image should look very close to the actual image, we hope that by limiting the number of strokes we can achieve an impresssionist effect. The idea is that if we want a certain effect or nature to be very present in the final product, we can potentially achieve this by making the building block have the attribute and additionally limit the number of blocks to prevent the effect from being saturated..
+While the given fitness function would suggest that the evolved image should closely match the source image, we hypothesize that with our image model and by limiting the total number of strokes within the image, we can achieve an effect similar to that of Impressionist paintings.
 
 \section{Background and Related Work}
-Unfortuantely, the topic of interest has very little literature. As far as we know, the only similar work is the Genetic Programming: Evolution of Mona Lisa work by Roger Alsing. Essentially, the work took a DNA string(each gene represents a polygon with a certain color) and continued to mutate the DNA string closer to the actual image.  At each step, the mutated child would be compared to the actual image and if it had a higher fitness function ($L_2$-norm), the child would succeed the parent.  This simple process yielded a fairly acceptable rendering of the Mona Lisa with minor artifacts. Also, we note that the Mona Lisa didn't really use genetic algorithms to their full potential, since a population of images wasn't used. A single image was mutated closer to the actual image with each step, so the work is more similar to hill-climbing. We feel that by using a population and incorporating crossover methods, we can reach an optimum in much fewer steps, although computation is more expensive.
+As far as we know, background material specific to our use case of genetic algorithms is sparse. Our original inspiration for the project primarily comes from a blog post, Genetic Programming: Evolution of Mona Lisa, by Roger Alsing \cite{alsing},  and subsequent derivated works. Essentially, Alsing's image model is a series of polygons, which are encoded as a DNA string, with each gene representing a polygon with specified color and opacity, and the DNA string is continuously mutated in order to evolve the image closer to the target. At each step, the mutated child would be compared to the actual image, with the $L_2$-norm being the fitness function, the child would replace the parent if the child were more fit. The simple process yielded a fairly acceptable rendering of the Mona Lisa with minor artifacts, as shown in Figure 1. We note that Alsing's Mona Lisa is a trivial usage of genetic algorithms, since the population consisted of a single individual. A single image was mutated closer to the actual image with each randomized step, so the algorithm appears to be more similar to hill-climbing. We believe that by using a larger population and incorporating methods for genetic crossover, an optimum can be reached in much fewer steps, although the computational complexity will increase.
 
-A few things to note about the experiment are that it took a significant amount of time (most likely due to 0 cross overs and only a population size of two) but yielded a reasonable result. As a result, we are fairly certain that in our case, we should be able to yield a similar result at the very least. That is, if we use two points, we would have rectangles and hence it would not be surprising to get a decent result.
+\begin{figure*}[!htb]
+\begin{center}
+\includegraphics[width=2in]{alsing0.png}\qquad
+\includegraphics[width=2in]{alsing1}
+\caption{Genetic Programming: Evolution of Mona Lisa, by Roger Alsing, the original inspiration for the project. The image on the left is a section of the original Mona Lisa painting, and the image on the right is the evolved image constructed with 50 transparent polygons. \cite{alsing}}
+\label{jpegfig}
+\end{center}
+\end{figure*}
 
-In other works that attempted to replicate Roger Alsing's work, more proper genetic algorithim approaches were taken which accounted for adjustable population size, selection, DNA mixing, etc. These approaches were able to achieve a faster convergence to the work of the Mona Lisa but the authors chose not to determine the amount of time necessary for a visually unindiscernible image to be generated. These works demonstrate our belief that adding crossovers and that of the like result in faster convergence then the straight forward hill climbing strategy of Alsing.
+We note that although a reasonable result was produced in Alsing's experiment, a significant amount of time was used (over 900,000 generations), most likely due to the lack of crossovers and a limited population size. As such, we were confident that by replacing polygons with brush strokes, we would be able to achieve a similar result at the very least. Consider that if we simply each brush stroke to two points and a stroke width, the strokes are effectively rectangles and hence a decent result can be expected.
+
+In other derivative works, more "proper" genetic algorithim approaches were taken such as accounting for adjustable population size, selection, DNA mixing, etc., and the approaches were able to achieve a faster convergence to the work of the Mona Lisa. However, the authors did not benchmark the amount of time necessary for a visually undiscernible image to the original to be generated. These works demonstrate our belief that adding crossovers and other improvements will result in faster convergence then Alsing's straightforward hill-climbing strategy.
 
 Finally, we would like to note that in contrast to these works we will not be mutating polygons. This differents in the uniformity of space covered as well as the distribution of the space. For example, given that we choose to use less than 4 to 5 points per spline, the space that we cover may be rather thin and limited. Essentially, the point we would like to elaborate is that while the focus of the problem remains similar, the problem space is extremely different.
 
+\section{The Genetic Painter}
+
+The strokes themselves are composed of splines with $k$ points, $h$ hue, $o$ opacity, and $t$ thickness.
 
 \section{Sampling for image compression}
 
@@ -269,15 +278,15 @@ Go to step 3.
 
 The algorithm requires the image dimensions to be square with edge size $2^m+1$ for some $m$. If the image size is invalid, then each sides are padded by zeros to one plus the next power of two. The runtime complexity for the algorithm is an efficient $O(n \log n)$ for an image with $n$ pixels, and we demonstrate that BTTC is able to accurately choose points in areas of high curvature, since the mean squared error (MSE) is bounded by $\epsilon^2$.  For additional details, see \cite{distasi}.
 
-\section{Metrics for Similarity}
-The metric by which we determine similarity in this paper are the $L_1$-norm and the $L_2$-norm. Essentially, given image A and image B, the fitness function for the $L_1$-norm variant would be defined as
+\section{Image Similarity}
+The $L_1$-norm and the $L_2$-norm errors are used to evaluate image similarity between two images. Given image A and image B, the fitness function for the $L_1$-norm variant would be defined as
 \[ \sum\limits_{i,j} |A_{i,j} - B_{i,j}| \]
-which intuitively simply means that the fitness function accounts for error, weighting the color offset for each pixel the same.
-For the $L_2$-norm version of the fitness function, we have
+which intuitively means that the fitness function accounts for total absolute error between two images, equally weighting the color offset for each pixel.
+For a fitness function of the $L_2$-norm error, we have
 \[ \sum\limits_{i,j} (A_{i,j} - B_{i,j})^2 \]
-which instead weights pixel offsets that are far off much more. While we do test both metrics for similarity, it may seem intuitively clear why most image processing algorithms use the $L_2$-norm. Rather thann weight all offsets the same, the farther a single pixel is off, the more heavily it is weighted. For example, if an image is off by one shade of red throughout the entire image, it is considered better than an image that has a large large color offset for a small region of the image.
+which puts greater weights on larger pixel offsets. While we did try using both metrics for evaluating similarity, we can intuitively see why most image processing algorithms use the $L_2$-norm. Instead of weighting all offsets equally, larger outliers are more heavily penalized. For example, an image that is consistently off by one shade of red throughout the entire image is preferable to an image that has a large color offset for a small region of the image. The idea is that optimizing for error in the $L_2$-norm preserves the salient features of the source image and is appropriate when a one-to-one mapping exists between pixels of the sample and source images. Additionally, the $L_2$-norm and RMSE as used in our application is similar to peak signal-to-noise ratio, which evaluates the accuracy of a lossy method for reconstructing signals. Other image similarity metrics were considered, such as normalized color histograms, but the focus was mostly on the implementing and refining our model.
 
-\section{Rendering the Image}
+\section{Image Rendering}
 To render the image of splines, the following method were considered. For every given point in the image, we determined the closest point on each and every spline curve to the point using the methods detailed by Wang et. al \cite{wang}. Using this distance and the width of the spline, we can determine whether the pixel would have been covered by a certain spline. Testing this method via Python, we determined that over 50 splines and an image of size 256 x 256, each complete rendering of the image took approximately 3 seconds on a 4.4Ghz i-3570k. Further testing yielded that the bottleneck factor was not the $L_2$-norm being computed but rather the actual rendering of the spline. In essence, for an image of size $MN$ with $K$ splines, it required $MNK$ iterations of the composite Newton method described in the paper.
 
 The next approach to achieve rendering in a computatably feasible manner was to draw the splines and then dilate the pixels of the spline. While it appears to have the same worst case performance, through the use of optimized packages, the rendering was achieved in approximately 0.01 seconds. We deemed that this computation time was sufficient for our purposes. 
@@ -316,11 +325,12 @@ asdf
 asdf
 
 \begin{thebibliography}{10}
-\bibitem{wang}
-Hongling Wang, Joseph Kearney, and Kendall Atkinson, {\em Robust and Efficient Computation of the Closest Point on a Spline Curve}, Dept. of Computer Science, The University of Iowa, (2002).
 
 \bibitem{alsing}
 Roger Alsing, {\em Genetic Programming: Evolution of Mona Lisa}, http://rogeralsing.com/2008/12/07/genetic-programming-evolution-of-mona-lisa/.
+
+\bibitem{wang}
+Hongling Wang, Joseph Kearney, and Kendall Atkinson, {\em Robust and Efficient Computation of the Closest Point on a Spline Curve}, Dept. of Computer Science, The University of Iowa, (2002).
   
 \end{thebibliography}
 
