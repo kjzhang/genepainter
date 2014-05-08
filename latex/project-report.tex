@@ -443,15 +443,17 @@ Our minimal supervision implementation uses the following parameters: the number
 \end{enumerate}
 
 \subsection{Maximal Supervision}
-stuff
+In comparison to our minimal supervision, the maximal supervision incorporates crossovers as specified above as well as a child retention policy. In addition, we attempt to factor in mutation on a gene level by replacing the stroke editing with a gene mutation.
 
+\pagebreak
+\section{Experiments and Results}
+Below, we present the optimal results from running on our machines as well as on the AWS cluster. The simulations took approximately 8 hours each on a 4.4Ghz i-3570k machine. 
 
-\section{Experiments}
+\subsection{Original Images}
+\[ \includegraphics[scale=0.66]{../images/ML129.png} \includegraphics[scale=0.5]{../images/picasso128.png} \]
 
-
-
-\section{Results}
 \subsection{Minimal Supervision}
+
 \begin{figure*}[!htb]
 \begin{center}
 \includegraphics[width=2in]{../TEMP/M-2.png}\qquad
@@ -470,6 +472,8 @@ stuff
 \label{evolutionfig}
 \end{center}
 \end{figure*}
+
+
 
 \pagebreak
 \begin{figure*}[!htb]
@@ -491,6 +495,7 @@ stuff
 \end{center}
 \end{figure*}
 
+\clearpage
 
 \subsection{Maximal Supervision}
 
@@ -514,6 +519,7 @@ stuff
 \end{figure*}
 
 \pagebreak
+\clearpage
 \begin{figure*}[!htb]
 \begin{center}
 \includegraphics[width=2in]{../groupA/P-126.png}\qquad
@@ -532,6 +538,9 @@ stuff
 \label{evolutionfig}
 \end{center}
 \end{figure*}
+
+\section{Discussion}
+Contrary to our expectations, the more forced learning that we attempted to insert into the process, the worse the image quality became. When sticking to simpler methods, our processed images generally had the wrong 
 
 \section{Conclusion}
 asdf
