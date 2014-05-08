@@ -309,7 +309,7 @@ Creating a sample set of pixels for each source image is inexpensive computation
 However, upon further investigation, image downsampling still had serious problems. First, the fitness evaluation is still too slow; a 7 percent sub-sample using the BTTC algorithm essential reduces the new run time to 7 percent of the original run time. With a population of 100 images, a useful number of generations cannot be computed within a reasonable time frame. Additionally, we note that although BTTC should get the most salient pixels of the image, we noticed that areas with sparse sub samples were populated by "junk" brush strokes even though the complex feature areas performed better. Intuitively, we can see why the observation is unsurprising, since the lack of sample pixels means large swaths of inaccurate data could be overlooked.
 
 \section{Implementation}
-Detailed below are the specifics of our implementation.
+The bulk of our implementation was done in Python, and requires the additional NumPy and matplotlib libraries for ND array manipulations and image rendering. Some initial investigatory work, such as the BTTC implementation, was done in MATLAB. The following sections detail the specifics of our implementation.
 
 \subsection{Downsampling}
 One of the key limitations that we soon realized was the running time required to generate reasonable results. Hence, given these limitations, it would be computationally infeasible to directly apply genetic algorithms to large pictures. However, we can instead reduce the size of the image to a much smaller level that allows for quick processing. After running the algorithm on the less detailed but similar representation, we can enlarge the image to the next level along with the doubling the sizes of the strokes.
@@ -454,7 +454,7 @@ Our minimal supervision implementation uses the following parameters: the number
 \includegraphics[width=2in]{../TEMP/M-6602.png}\qquad
 \includegraphics[width=2in]{../TEMP/M-15130.png}\qquad
 \includegraphics[width=2in]{../TEMP/M-46057.png}\\
-\caption{Mona Lisa, unsupervised genetic algorithm.}
+\caption{Mona Lisa, unsupervised genetic algorithm, fittest genome, 50,000 generations}
 \label{evolutionfig}
 \end{center}
 \end{figure*}
@@ -474,13 +474,13 @@ Our minimal supervision implementation uses the following parameters: the number
 \includegraphics[width=2in]{../TEMP/P-12426.png}\qquad
 \includegraphics[width=2in]{../TEMP/P-30034.png}\qquad
 \includegraphics[width=2in]{../TEMP/P-44778.png}\\
-\caption{Picasso, unsupervised genetic algorithm.}
+\caption{Picasso, unsupervised genetic algorithm, fittest genome, 50,000 generations}
 \label{evolutionfig}
 \end{center}
 \end{figure*}
 
 \section{Conclusion}
-For our project, we implemented an image painter that evolves images toward a target with a genetic algorithm. Although our results are encouraging in that the overall structure of the brush strokes is a reasonable representation of the original image, many improvements could be made.  First, we confirmed our original hypothesis of allowing for arbitrary spline curves as brush strokes greatly increases the size of the problem space. Thus, with the additional computation overhead of evaluating splines, many more generations are required for images to converge to a better optimum. Given more time, we would like to run our simulations for a greater number of generations; note that Alsing's Mona Lisa was run for over 900,000 generations, while our maximum iteration was 50,000, given the time constraints. Another approach we have explored to better handle the large problem space was to provide supervision in the learning, such as modifying population parameters based on the generation, the probability and distribution of mutations, and combining different methods of mutation. Finally, the rendering aggregator library we used to paint the strokes in Python greatly limits the effects and weighting that can be applied to each brush stroke, and in the future we would like to fulfill our original goal of being able to render the brush strokes with additional effects and weighting.
+For our project, we implemented an image painter that evolves images toward a target with a genetic algorithm. Although our results are encouraging in that the overall structure of the brush strokes is a reasonable representation of the original image, many improvements could be made.  First, we confirmed our original hypothesis of allowing for arbitrary spline curves as brush strokes greatly increases the size of the problem space. Thus, with the additional computation overhead of evaluating splines, many more generations are required for images to converge to a better optimum. Given more time, we would like to run our simulations for a greater number of generations; note that Alsing's Mona Lisa was run for over 900,000 generations, while our maximum iteration was 50,000, given the time constraints. Another approach we have explored to better handle the large problem space was to provide supervision in the learning, such as modifying population parameters based on the generation, the probability and distribution of mutations, and combining different methods of mutation. Finally, the rendering aggregator library we used to paint the strokes in Python greatly limits the effects and weighting that can be applied to each brush stroke, and in the future we would like to fulfill our original goal of being able to render the brush strokes with additional effects and weighting. Images of our supervised genetic algorithm are shown in the Appendix.
 
 \begin{thebibliography}{10}
 
@@ -501,19 +501,19 @@ R.~Distasi, M.~Nappi, and S.~Virtulano, {\em Image Compression by {BTTC}-Tree Tr
 
 \begin{figure*}[!htb]
 \begin{center}
-\includegraphics[width=2in]{../groupA/M-102.png}\qquad
-\includegraphics[width=2in]{../groupA/M-156.png}\qquad
-\includegraphics[width=2in]{../groupA/M-288.png}\\
-\includegraphics[width=2in]{../groupA/M-427.png}\qquad
-\includegraphics[width=2in]{../groupA/M-515.png}\qquad
-\includegraphics[width=2in]{../groupA/M-1161.png}\\
-\includegraphics[width=2in]{../groupA/M-1813.png}\qquad
-\includegraphics[width=2in]{../groupA/M-3178.png}\qquad
-\includegraphics[width=2in]{../groupA/M-4578.png}\\
-\includegraphics[width=2in]{../groupA/M-14630.png}\qquad
-\includegraphics[width=2in]{../groupA/M-35131.png}\qquad
-\includegraphics[width=2in]{../groupA/M-36522.png}\\
-\caption{Mona Lisa, supervised genetic algorithm.}
+\includegraphics[width=2in]{../TEMP2/M-102.png}\qquad
+\includegraphics[width=2in]{../TEMP2/M-156.png}\qquad
+\includegraphics[width=2in]{../TEMP2/M-288.png}\\
+\includegraphics[width=2in]{../TEMP2/M-427.png}\qquad
+\includegraphics[width=2in]{../TEMP2/M-515.png}\qquad
+\includegraphics[width=2in]{../TEMP2/M-1161.png}\\
+\includegraphics[width=2in]{../TEMP2/M-1813.png}\qquad
+\includegraphics[width=2in]{../TEMP2/M-3178.png}\qquad
+\includegraphics[width=2in]{../TEMP2/M-4578.png}\\
+\includegraphics[width=2in]{../TEMP2/M-14630.png}\qquad
+\includegraphics[width=2in]{../TEMP2/M-35131.png}\qquad
+\includegraphics[width=2in]{../TEMP2/M-36522.png}\\
+\caption{Mona Lisa, supervised genetic algorithm, fittest genome, 50,000 generations.}
 \label{evolutionfig}
 \end{center}
 \end{figure*}
@@ -521,19 +521,19 @@ R.~Distasi, M.~Nappi, and S.~Virtulano, {\em Image Compression by {BTTC}-Tree Tr
 \pagebreak
 \begin{figure*}[!htb]
 \begin{center}
-\includegraphics[width=2in]{../groupA/P-126.png}\qquad
-\includegraphics[width=2in]{../groupA/P-199.png}\qquad
-\includegraphics[width=2in]{../groupA/P-629.png}\\
-\includegraphics[width=2in]{../groupA/P-1416.png}\qquad
-\includegraphics[width=2in]{../groupA/P-1889.png}\qquad
-\includegraphics[width=2in]{../groupA/P-3921.png}\\
-\includegraphics[width=2in]{../groupA/P-4321.png}\qquad
-\includegraphics[width=2in]{../groupA/P-6558.png}\qquad
-\includegraphics[width=2in]{../groupA/P-7792.png}\\
-\includegraphics[width=2in]{../groupA/P-8391.png}\qquad
-\includegraphics[width=2in]{../groupA/P-14741.png}\qquad
-\includegraphics[width=2in]{../groupA/P-49320.png}\\
-\caption{Picasso, supervised genetic algorithm.}
+\includegraphics[width=2in]{../TEMP2/P-126.png}\qquad
+\includegraphics[width=2in]{../TEMP2/P-199.png}\qquad
+\includegraphics[width=2in]{../TEMP2/P-629.png}\\
+\includegraphics[width=2in]{../TEMP2/P-1416.png}\qquad
+\includegraphics[width=2in]{../TEMP2/P-1889.png}\qquad
+\includegraphics[width=2in]{../TEMP2/P-3921.png}\\
+\includegraphics[width=2in]{../TEMP2/P-4321.png}\qquad
+\includegraphics[width=2in]{../TEMP2/P-6558.png}\qquad
+\includegraphics[width=2in]{../TEMP2/P-7792.png}\\
+\includegraphics[width=2in]{../TEMP2/P-8391.png}\qquad
+\includegraphics[width=2in]{../TEMP2/P-14741.png}\qquad
+\includegraphics[width=2in]{../TEMP2/P-49320.png}\\
+\caption{Picasso, supervised genetic algorithm, fittest genome, 50,000 generations.}
 \label{evolutionfig}
 \end{center}
 \end{figure*}
