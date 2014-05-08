@@ -13,6 +13,9 @@ from matplotlib.lines import Line2D
 
 from genepainter import dump_dna
 
+# start time
+p_start = int(time.time())
+
 #population size and strokes per strand
 num_strokes = 50
 population_size = 10
@@ -203,7 +206,7 @@ class GenePainter(object):
 
             if error_change > 0.0:
                 for z in xrange(10):
-                    dump_dna(self.population[0].strokes, 'original-' + sys.argv[1] + '-' + str(num_iter) + '-' + str(z) + str(np.random.random()) + '.txt')
+                    dump_dna(self.population[0].strokes, 'original-' + str(p_start) + '-' + str(num_iter) + '-' + str(z) + '.txt')
 
         plt.imshow(self.population[0].render(), interpolation='none')
         plt.show()
