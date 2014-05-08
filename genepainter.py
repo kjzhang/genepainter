@@ -424,18 +424,108 @@ def sample_mutation():
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: %s image" % sys.argv[0])
-        sys.exit(-1)
+    # if len(sys.argv) < 2:
+    #     print("Usage: %s image" % sys.argv[0])
+    #     sys.exit(-1)
 
-    source = read_image(sys.argv[1])
-    p = GenePainter(source)
-    p.paint()
+    #source = read_image(sys.argv[1])
+    #p = GenePainter(source)
+    #p.paint()
 
-    # (a,b,c) = source.shape
     # dump_dna(DNAImage((a,b)).strokes)
 
-    # strokes = load_dna('run_00/4918-0.txt')
-    # dna = DNAImage((a,b), strokes)
-    # plt.imshow(dna.render(), interpolation='none')
-    # plt.show()
+    files = [
+            'original 2-00.332583054239.txt',
+            'original 2-00.335408792734.txt',
+            'original 4-00.2780528617.txt',
+            'original 4-00.44655414198.txt',
+            'original 5-00.122783417801.txt',
+            'original 5-00.425307710567.txt',
+            'original 10-00.362482372671.txt',
+            'original 10-00.815099764983.txt',
+            'original 21-00.918623730954.txt',
+            'original 22-00.362341453642.txt',
+            'original 29-00.931912632865.txt',
+            'original 30-00.245002748557.txt',
+            'original 30-00.935829493843.txt',
+            'original 50-00.5295259206.txt',
+            'original 50-00.227976608302.txt',
+            'original 72-00.7903701926.txt',
+            'original 80-00.464642260474.txt',
+            'original 84-00.969461533804.txt',
+            'original 86-00.228553026805.txt',
+            'original 100-00.286420714599.txt',
+            'original 107-00.0916597171612.txt',
+            'original 154-00.738719125809.txt',
+            'original 170-00.962676971276.txt',
+            'original 203-00.504767517558.txt',
+            'original 228-00.940635504154.txt',
+            'original 245-00.170706845088.txt',
+            'original 262-00.696481054397.txt',
+            'original 276-00.965563246506.txt',
+            'original 301-00.252354715948.txt',
+            'original 352-00.490410430434.txt',
+            'original 402-00.464733497456.txt',
+            'original 510-00.5590586442.txt',
+            'original 625-00.0572837629219.txt',
+            'original 737-00.941838909794.txt',
+            'original 857-00.883552505651.txt',
+            'original 964-00.349634035064.txt',
+            'original 1021-00.746543020087.txt',
+            'original 1100-00.0730107373312.txt',
+            'original 1263-00.279881829294.txt',
+            'original 1363-00.284395160092.txt',
+            'original 1401-00.470652535631.txt',
+            'original 1525-00.204626912415.txt',
+            'original 1604-00.808284127323.txt',
+            'original 1665-00.11861257823.txt',
+            'original 1850-00.837506694489.txt',
+            'original 1931-00.849566564901.txt',
+            'original 1992-00.475795697596.txt',
+            'original 2508-00.996082572991.txt',
+            'original 5226-00.95610069288.txt',
+            'original 5922-00.488902211764.txt',
+            'original 6602-00.115022659561.txt',
+            'original 7057-00.400067879808.txt',
+            'original 8014-00.569516778873.txt',
+            'original 8408-00.561766866651.txt',
+            'original 10268-00.0194648360162.txt',
+            'original 12426-00.119837755698.txt',
+            'original 15130-00.0746400399838.txt',
+            'original 17089-00.603551683287.txt',
+            'original 24632-00.728961607335.txt',
+            'original 28215-00.410648436287.txt',
+            'original 30034-00.817678589609.txt',
+            'original 33967-00.312255133125.txt',
+            'original 35631-00.806513633943.txt',
+            'original 37479-00.689369211118.txt',
+            'original 38672-00.746769833052.txt',
+            'original 42099-00.996372443341.txt',
+            'original 44778-00.689998922451.txt',
+            'original 45812-00.921531355528.txt',
+            'original 46057-00.22735750397.txt',
+
+
+
+
+
+
+
+
+            ]
+
+    for filename in files:
+        iteration = filename.split(' ')[1].split('-')[0]
+
+        strokes = load_dna(filename)
+        shape = strokes[0].shape
+        (a,b) = shape
+        if a==128:
+            append = "P"
+        else:
+            append = "M"
+
+        dna = DNAImage(shape, strokes)
+        plt.imshow(dna.render(), interpolation='none')
+        #plt.show()
+        plt.savefig('groupB/' + str(append) + '-' + str(iteration) + '.png')
