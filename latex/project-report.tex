@@ -240,16 +240,11 @@ The bottom-most representation of the genenome in this work was the stroke. The 
 Unlike the Alsing work, we choose to keep both an adjustable population of adults and children. In our tests with a 256 x 256 image, we used population sizes ranging from 30 to 100 for both children and for the parents. In addition, we added a survival policy to recently mutated children to give them a competitive advantage in the testing. That is, some children, regardless of fitness, are spared from the filtering process for an adjustable period of rounds. The intuition behind employing such a policy was to prevent our program from dropping into a local minimum. The only disadvantage of the policy is the sacrificed additional resources that are necessary to keep the less fit offspring alive and allowing them to reproduce.
 
 \subsection{Mutation}
-We incorporate multiple levels of mutation to provide for the maximum level of adjustability. At the highest level, we have that each gene which is a stroke can be mutated via addition, editing, or deletion. In the case of addition which has an adjustable rate parameter, we append a completely random new stroke based on the same initial generation parameters to the DNA sequence. Given the opacity parameters, the ordering should not matter. In the case of deletion, we can choose to delete one of the genes or strokes completely from the sequence. Finally, in the case of editing, we can choose to replace the gene with a completely new gene, i.e. addition and deletion combined.
-However, we note the mutation for editing may be too drastic and hence, we have a separate level of mutations. Instead of simply changing the entire stroke, we mutate specific attributes of the stroke. This method should prove to be useful when trying to fine tune an image instead of attempting to completely start fresh. We structure the random generation by creating normal distributions centered around the current values for the locations, width, opacity, and color with an adjustable standard deviation. Essentially, instead of randomly guessing with no bias, we attempt to shift the stroke slightly and see if we can find any improvements nearby. Additionally, in this case, we can also choose to remove or add points in the spline of the stroke.
+We incorporate multiple levels of mutation to provide for the maximum level of adjustability. At the highest level, we have that each gene which is a stroke can be mutated via addition, editing, or deletion. In the case of addition which has an adjustable rate parameter, we append a completely random new stroke based on the same initial generation parameters to the DNA sequence. In the case of deletion, we can choose to delete one of the genes or strokes completely from the sequence. Finally, in the case of editing, we can choose to replace the gene with a completely new gene, i.e. addition and deletion combined.
+However, we note our original mutation for editing may be too random and hence, we have a separate level of mutations. Instead of simply changing the entire stroke, we mutate specific attributes of the stroke, which should prove to be useful when trying to fine tune an image instead of attempting to completely start fresh. We structure the random generation by creating normal distributions centered around the current values for the locations, width, opacity, and color with an adjustable standard deviation. Essentially, instead of randomly guessing with no bias, we attempt to shift the stroke slightly in a random direction and see if we can find any improvements nearby. Additionally, in this case, we can also choose to remove or add points in the spline of the stroke.
 
 \subsection{Crossovers}
-The crossoveres of the DNA were implemented in a couple of methods.
-
-First, the most naive method we chose to use was to pick two DNA strands and we uniformly randomly picked genes or strokes from both strands. Additionally, we pick one strand randomly over the other to determine the length of the strand. However, we expect such a method to yield a random data that does not significantly improve the result. That is, given that a group of strokes together are what most likely cause the fitness to do well as a whole, removing one of these from the group or merging two groups will not necessarily improve the fitness unless they are a large mutually exclusive set.
-
-The other approach we attempt is to swap out entire regions from the DNA strand in an attempt to transfer entire groups of strokes that work well together.
-We present the pseudo-code in the next section.
+DNA crossover was implemented in multiple ways. First, the naive method we chose to use was to pick two DNA strands and and uniformly pick random genes and/or strokes from both strands. Additionally, we pick one strand randomly over the other to determine the length of the strand. However, we expect such a method to yield a random data that does not significantly improve the result. Given that a group of strokes together are what most likely cause the fitness to do well as a whole, removing one of these from the group or merging two groups will not necessarily improve the fitness unless they are a large mutually exclusive set. The second approach we attempt is to swap out entire regions from the DNA strand, which is conceptually a single-pooint crossover, in an attempt to transfer entire groups of strokes that work well together.
 
 \section{Image Similarity}
 The $L_1$-norm and the $L_2$-norm errors are used to evaluate image similarity between two images. Given image A and image B, the fitness function for the $L_1$-norm variant would be defined as
@@ -258,6 +253,15 @@ which intuitively means that the fitness function accounts for total absolute er
 For a fitness function of the $L_2$-norm error, we have
 \[ \sum\limits_{i,j} (A_{i,j} - B_{i,j})^2 \]
 which puts greater weights on larger pixel offsets. While we did try using both metrics for evaluating similarity, we can intuitively see why most image processing algorithms use the $L_2$-norm. Instead of weighting all offsets equally, larger outliers are more heavily penalized. For example, an image that is consistently off by one shade of red throughout the entire image is preferable to an image that has a large color offset for a small region of the image. The idea is that optimizing for error in the $L_2$-norm preserves the salient features of the source image and is appropriate when a one-to-one mapping exists between pixels of the sample and source images. Additionally, the $L_2$-norm and RMSE as used in our application is similar to peak signal-to-noise ratio, which evaluates the accuracy of a lossy method for reconstructing signals. Other image similarity metrics were considered, such as normalized color histograms, but the focus was mostly on the implementing and refining our model.
+
+\begin{figure*}[!htb]
+\begin{center}
+\includegraphics[width=2in]{../images/picasso128.png}\qquad
+\includegraphics[width=2in]{../images/ML257.png}
+\caption{Picasso and Mona Lisa, our evolution targets.}
+\label{jpegfig}
+\end{center}
+\end{figure*}
 
 \section{Image Rendering}
 We explored various methods of rendering the complete image from a list of stroke genomes. The original method was, for every given point in the image, determine the closest point on each and every spline curve to the point using the methods detailed by Wang et. al \cite{wang}. Using this distance and the width of the spline, we can determine whether the pixel would have been covered by a certain spline. In essence, we are computing the Hausdorff metric between the space of pixels on the image and the points on the spline curve. In our implementation, we determined that an image of 100 splines and size 256 x 256, took approximately 3 seconds on an Intel  4.4Ghz i-3570k processor. Further testing yielded that the bottleneck factor was not the $L_2$-norm being computed but rather the actual rendering of the spline. In essence, for an image of size $MN$ with $K$ splines, it required $MNK$ iterations of the composite Newton method described in the paper. For our purposes, the rendering was drastically too slow to generate any reasonable number of generations in the the project time frame, with each generation taking over a minute to compute. We also explored image downsampling techniques, which are outlined in the following section.
@@ -302,17 +306,17 @@ The BTTC decomposition requires the image dimensions to be square with edge size
 \subsection{Conclusions}
 Creating a sample set of pixels for each source image is inexpensive computationally. The randomized and uniform samples are very fast, but the recursive BTTC algorithm is more complex and depends greatly on the error threshold, although the BTTC tree only needs to be computed once per run. Figure 3 shows a comparison of image sampling with the randomized and BTTC selection methods, and we note that the BTTC algorithm selects pixels that are better represent the salient features of the image.
 
-However, upon further investigation, image downsampling still had serious problems.First, the fitness evaluation is still too slow; a 7 percent sub-sample using the BTTC algorithm essential reduces the new run time to 7 percent of the original run time. With a population of 100 images, a useful number of generations cannot be computed within a reasonable time frame. Additionally, we note that although BTTC should get the most salient pixels of the image, we noticed that areas with sparse sub samples were populated by "junk" brush strokes even though the complex feature areas performed better. Intuitively, we can see why the observation is unsurprising, since the lack of sample pixels means large swaths of inaccurate data could be overlooked.
+However, upon further investigation, image downsampling still had serious problems. First, the fitness evaluation is still too slow; a 7 percent sub-sample using the BTTC algorithm essential reduces the new run time to 7 percent of the original run time. With a population of 100 images, a useful number of generations cannot be computed within a reasonable time frame. Additionally, we note that although BTTC should get the most salient pixels of the image, we noticed that areas with sparse sub samples were populated by "junk" brush strokes even though the complex feature areas performed better. Intuitively, we can see why the observation is unsurprising, since the lack of sample pixels means large swaths of inaccurate data could be overlooked.
 
 \section{Implementation}
-We detail our actual implementation below.
+The bulk of our implementation was done in Python, and requires the additional NumPy and matplotlib libraries for ND array manipulations and image rendering. Some initial investigatory work, such as the BTTC implementation, was done in MATLAB. The following sections detail the specifics of our implementation.
 
 \subsection{Downsampling}
 One of the key limitations that we soon realized was the running time required to generate reasonable results. Hence, given these limitations, it would be computationally infeasible to directly apply genetic algorithms to large pictures. However, we can instead reduce the size of the image to a much smaller level that allows for quick processing. After running the algorithm on the less detailed but similar representation, we can enlarge the image to the next level along with the doubling the sizes of the strokes.
 
-Intuitively, this would allow us to determine the general strokes necessary to produce the key features of the picture quickly. The remaining details which would normally take an exorbitant amount of time to be fine tuned would be done much quicker via a narrowed range of mutation as described above. We detail the pseudo code below.
+Intuitively, this would allow us to determine the general strokes necessary to produce the key features of the picture quickly. The remaining details which would normally take an exorbitant amount of time to be fine tuned would be done much quicker via a narrowed range of mutation as described above.
 
-\subsection{Writing DNA to Files}
+\subsection{Dumping DNA Outputs}
 One of the core difficulties we encountered was with the duration length of our experiments. That is, due to the computationally intensive manner, we found that our processes would often stall. Moreover, the result of the processing could not be seen until after the trials had finished, limting our ability to test quickly and alter our supervision. To resolve this issue, we chose to write the entire population to a file at each improvement. While this slows the process down due to the File I/O necessary, we believe its utility is worth the cost. We present a sample of our semi-colon delmited format for a single stroke below.
 
 \begin{verbatim}
@@ -427,30 +431,14 @@ End For
 \end{verbatim}
 
 \subsection{Minimal Supervision}
-Our minimal supervision implementation uses the following parameters: the number of strokes per DNA strand is 50, a maximum population size of 10, minimum spline points of 2 and a maximum spline points of 3, add mutation rate of 0.2, change or delete mutation rate of 0.07, conditional delete mutation rate of 0.5, a maximum children population of 25, no crossovers, minimum iteration of 50,000. The version employed only DNA level mutations and any sort of mutation resulted in a completely new stroke being generated. We detail the psuedo-code below.
-
-\begin{enumerate}
-
-	\item Generate a set of 10 DNA strands each containing 50 random strokes
-	\item Initialize $NumIter$ Counter
-	\item While $NumIter < 50000$ And Change In Error in Last 10 rounds is 0
-	\item Generate set of 25 mutations
-	\item Pick top 10 from the 35 resulting strands
-	\item Increment $NumIter$
-	\item End While
-	\item Output Lowest Error Image
-
-\end{enumerate}
+Our minimal supervision implementation uses the following parameters: the number of strokes per DNA strand is 50, a maximum population size of 10, minimum spline points of 2 and a maximum spline points of 3, add mutation rate of 0.2, change or delete mutation rate of 0.07, conditional delete mutation rate of 0.5, a maximum children population of 25, no crossovers, minimum iteration of 50,000. The version employed only DNA level mutations and any sort of mutation resulted in a completely new stroke being generated.
 
 \subsection{Maximal Supervision}
+
 In comparison to our minimal supervision, the maximal supervision incorporates crossovers as specified above as well as a child retention policy. In addition, we attempt to factor in mutation on a gene level by replacing the stroke editing with a gene mutation.
 
-\pagebreak
 \section{Experiments and Results}
 Below, we present the optimal results from running on our machines as well as on the AWS cluster. The simulations took approximately 8 hours each on a 4.4Ghz i-3570k machine. 
-
-\subsection{Original Images}
-\[ \includegraphics[scale=0.66]{../images/ML129.png} \includegraphics[scale=0.5]{../images/picasso128.png} \]
 
 \subsection{Minimal Supervision}
 
@@ -468,7 +456,7 @@ Below, we present the optimal results from running on our machines as well as on
 \includegraphics[width=2in]{../TEMP/M-6602.png}\qquad
 \includegraphics[width=2in]{../TEMP/M-15130.png}\qquad
 \includegraphics[width=2in]{../TEMP/M-46057.png}\\
-\caption{Here we have our unsupervised learning genetic algorithm running on the original Mona Lisa image.}
+\caption{Mona Lisa, unsupervised genetic algorithm, fittest genome, 50,000 generations}
 \label{evolutionfig}
 \end{center}
 \end{figure*}
@@ -490,60 +478,18 @@ Below, we present the optimal results from running on our machines as well as on
 \includegraphics[width=2in]{../TEMP/P-12426.png}\qquad
 \includegraphics[width=2in]{../TEMP/P-30034.png}\qquad
 \includegraphics[width=2in]{../TEMP/P-44778.png}\\
-\caption{Similar to before, we have the supervised learning genetic algorithm running on our Picasso.}
+
+\caption{Picasso, unsupervised genetic algorithm, fittest genome, 50,000 generations}
 \label{evolutionfig}
 \end{center}
 \end{figure*}
 
-\clearpage
-
-\subsection{Maximal Supervision}
-
-\begin{figure*}[!htb]
-\begin{center}
-\includegraphics[width=2in]{../groupA/M-102.png}\qquad
-\includegraphics[width=2in]{../groupA/M-156.png}\qquad
-\includegraphics[width=2in]{../groupA/M-288.png}\\
-\includegraphics[width=2in]{../groupA/M-427.png}\qquad
-\includegraphics[width=2in]{../groupA/M-515.png}\qquad
-\includegraphics[width=2in]{../groupA/M-1161.png}\\
-\includegraphics[width=2in]{../groupA/M-1813.png}\qquad
-\includegraphics[width=2in]{../groupA/M-3178.png}\qquad
-\includegraphics[width=2in]{../groupA/M-4578.png}\\
-\includegraphics[width=2in]{../groupA/M-14630.png}\qquad
-\includegraphics[width=2in]{../groupA/M-35131.png}\qquad
-\includegraphics[width=2in]{../groupA/M-36522.png}\\
-\caption{Here we have our supervised learning genetic algorithm running on the original Mona Lisa image.}
-\label{evolutionfig}
-\end{center}
-\end{figure*}
-
-\pagebreak
-\clearpage
-\begin{figure*}[!htb]
-\begin{center}
-\includegraphics[width=2in]{../groupA/P-126.png}\qquad
-\includegraphics[width=2in]{../groupA/P-199.png}\qquad
-\includegraphics[width=2in]{../groupA/P-629.png}\\
-\includegraphics[width=2in]{../groupA/P-1416.png}\qquad
-\includegraphics[width=2in]{../groupA/P-1889.png}\qquad
-\includegraphics[width=2in]{../groupA/P-3921.png}\\
-\includegraphics[width=2in]{../groupA/P-4321.png}\qquad
-\includegraphics[width=2in]{../groupA/P-6558.png}\qquad
-\includegraphics[width=2in]{../groupA/P-7792.png}\\
-\includegraphics[width=2in]{../groupA/P-8391.png}\qquad
-\includegraphics[width=2in]{../groupA/P-14741.png}\qquad
-\includegraphics[width=2in]{../groupA/P-49320.png}\\
-\caption{Similar to before, we have the supervised learning genetic algorithm running on our Picasso.}
-\label{evolutionfig}
-\end{center}
-\end{figure*}
 
 \section{Discussion}
 Contrary to our expectations, the more forced learning that we attempted to insert into the process, the worse the image quality became. When sticking to simpler methods, our processed images generally had the wrong 
 
 \section{Conclusion}
-asdf
+For our project, we implemented an image painter that evolves images toward a target with a genetic algorithm. Although our results are encouraging in that the overall structure of the brush strokes is a reasonable representation of the original image, many improvements could be made.  First, we confirmed our original hypothesis of allowing for arbitrary spline curves as brush strokes greatly increases the size of the problem space. Thus, with the additional computation overhead of evaluating splines, many more generations are required for images to converge to a better optimum. Given more time, we would like to run our simulations for a greater number of generations; note that Alsing's Mona Lisa was run for over 900,000 generations, while our maximum iteration was 50,000, given the time constraints. Another approach we have explored to better handle the large problem space was to provide supervision in the learning, such as modifying population parameters based on the generation, the probability and distribution of mutations, and combining different methods of mutation. Finally, the rendering aggregator library we used to paint the strokes in Python greatly limits the effects and weighting that can be applied to each brush stroke, and in the future we would like to fulfill our original goal of being able to render the brush strokes with additional effects and weighting. Images of our supervised genetic algorithm are shown in the Appendix.
 
 \begin{thebibliography}{10}
 
@@ -561,5 +507,44 @@ R.~Distasi, M.~Nappi, and S.~Virtulano, {\em Image Compression by {BTTC}-Tree Tr
 %----------------------------------------------------------------------------------------
 
 \end{article}
+
+\begin{figure*}[!htb]
+\begin{center}
+\includegraphics[width=2in]{../TEMP2/M-102.png}\qquad
+\includegraphics[width=2in]{../TEMP2/M-156.png}\qquad
+\includegraphics[width=2in]{../TEMP2/M-288.png}\\
+\includegraphics[width=2in]{../TEMP2/M-427.png}\qquad
+\includegraphics[width=2in]{../TEMP2/M-515.png}\qquad
+\includegraphics[width=2in]{../TEMP2/M-1161.png}\\
+\includegraphics[width=2in]{../TEMP2/M-1813.png}\qquad
+\includegraphics[width=2in]{../TEMP2/M-3178.png}\qquad
+\includegraphics[width=2in]{../TEMP2/M-4578.png}\\
+\includegraphics[width=2in]{../TEMP2/M-14630.png}\qquad
+\includegraphics[width=2in]{../TEMP2/M-35131.png}\qquad
+\includegraphics[width=2in]{../TEMP2/M-36522.png}\\
+\caption{Mona Lisa, supervised genetic algorithm, fittest genome, 50,000 generations.}
+\label{evolutionfig}
+\end{center}
+\end{figure*}
+
+\pagebreak
+\begin{figure*}[!htb]
+\begin{center}
+\includegraphics[width=2in]{../TEMP2/P-126.png}\qquad
+\includegraphics[width=2in]{../TEMP2/P-199.png}\qquad
+\includegraphics[width=2in]{../TEMP2/P-629.png}\\
+\includegraphics[width=2in]{../TEMP2/P-1416.png}\qquad
+\includegraphics[width=2in]{../TEMP2/P-1889.png}\qquad
+\includegraphics[width=2in]{../TEMP2/P-3921.png}\\
+\includegraphics[width=2in]{../TEMP2/P-4321.png}\qquad
+\includegraphics[width=2in]{../TEMP2/P-6558.png}\qquad
+\includegraphics[width=2in]{../TEMP2/P-7792.png}\\
+\includegraphics[width=2in]{../TEMP2/P-8391.png}\qquad
+\includegraphics[width=2in]{../TEMP2/P-14741.png}\qquad
+\includegraphics[width=2in]{../TEMP2/P-49320.png}\\
+\caption{Picasso, supervised genetic algorithm, fittest genome, 50,000 generations.}
+\label{evolutionfig}
+\end{center}
+\end{figure*}
 
 \end{document}
