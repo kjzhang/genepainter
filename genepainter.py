@@ -406,22 +406,25 @@ class GenePainter(object):
 if __name__ == "__main__":
 
     source = read_image('ML257.png')
-    #(a,b,c) = source.shape
+    (a,b,c) = source.shape
     #dump_dna(DNAImage((a,b)).strokes)
 
-    p = GenePainter(source)
+    #p = GenePainter(source)
     #p.paint()
 
-    
-    image = DNAImage((256, 256), strokes=[])
-    stroke = GeneStroke.random((256, 256))
-    image.strokes.append(stroke)
-
-    plt.imshow(image.render(), interpolation='none')
+    strokes = load_dna('2025-0.txt')
+    dna = DNAImage((a,b), strokes)
+    plt.imshow(dna.render(), interpolation='none')
     plt.show()
+    # image = DNAImage((256, 256), strokes=[])
+    # stroke = GeneStroke.random((256, 256))
+    # image.strokes.append(stroke)
 
-    stroke.mutate()
+    # plt.imshow(image.render(), interpolation='none')
+    # plt.show()
 
-    plt.imshow(image.render(), interpolation='none')
-    plt.show()
+    # stroke.mutate()
+
+    # plt.imshow(image.render(), interpolation='none')
+    # plt.show()
     

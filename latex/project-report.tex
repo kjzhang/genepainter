@@ -108,7 +108,7 @@
 %------------------------------------------------
 
 %% For PNAS Only:
-\contributor{Submitted for Applied Mathematics 205, Harvard University}
+\contributor{CS289, Harvard University}
 \url{Wang and Zhang}
 \copyrightyear{2014}
 \volume{Spring}
@@ -123,7 +123,7 @@
 %	TITLE AND AUTHORS
 %----------------------------------------------------------------------------------------
 
-\title{Genetic} % For titles, only capitalize the first letter
+\title{Genetic Algorithms } % For titles, only capitalize the first letter
 
 %------------------------------------------------
 
@@ -169,11 +169,13 @@ Kevin Zhang\affil{2}{kzhang@college.harvard.edu}}
 
 \begin{abstract}
 We review the mathematical basis behind PDE-based image editing, focusing on methods of image interpolation for inpainting, including smoothing, linear diffusion, and nonlinear diffusion. Additionally, we implement a PDE-based image compression and decompression scheme. We investigate random sampling and a recursive tree-based sampling method for selecting pixels to decompress.
+
+
 \end{abstract}
 
 %------------------------------------------------
 
-\keywords{Image Editing | PDE | Compression | Interpolation | Inpainting | BTTC} % When adding keywords, separate each term with a straight line: |
+\keywords{Genetic Algorithms | Image Processing | Hill Climbing} % When adding keywords, separate each term with a straight line: |
 
 %------------------------------------------------
 
@@ -195,31 +197,21 @@ We review the mathematical basis behind PDE-based image editing, focusing on met
 
 \section{Introduction}
 
-\dropcap{L}ossy compression is a data encoding method that aims to reduce the redundancy of a data file so that it can be stored and transmitted efficiently.  Lossy compression techniques are especially important for multimedia applications such as image compression due to the large file sizes involved.  For example, a 1 megapixel photo with 24 bits per pixel---8 bits per color---requires at least 3 megabytes to store in raw form.  Lossy compression involves discarding some of the total information in the data to substantially reduce its size (in contrast to lossless compression, which preserves all information).  Many popular image formats, including the JPEG family, use lossy compression and can typically reduce file size by upwards of 80\% before degradation is noticeable.
+\dropcap{O}ne of the most popular fields of image processing is the field of applying filters to images to render a different look or feeling. Popularized by Photoshop and Instagram, most of these filters concentrate and focus on things such as changing the contrast, exposure, or rendering the entire image in a different style. However, these algorithms often require fine tuning and in the cases of more artistic filters, are unable to provide a sense of realism as to how the piece was produced. In particular, in this paper we are interested in designing and testing an algorithm that attempts to tackle the problem of rendering photos in an impressionist manner like the works of Monet, Renoir, etc.  The impressionist paintings are distinct in that they use relatively small and thin brush strokes to depict the entire painting. These strokes are very visible on the painting and create an atmosphere of open composition which depicts light in expression over time.
 
 %The most popular lossy compression approach for images uses wavelet or discrete cosine transforms.  
-The most popular established image compression standards, including JPEG and JPEG 2000, typically use wavelet transforms and frequency quantization.  However, these classical image compression usually have ``blind'' steps that unnecessarily introduce loss of information.  JPEG, for instance, chops the image into $8 \times 8$ pixel blocks that are transformed into a frequency domain via a discrete cosine transform, which can lead to the blocky compression artifacts typical of a highly compressed JPEG image (see Fig. \ref{jpegfig}).  On the other hand, image compression methods based on partial differential equations (PDEs) constitute a relatively new class of lossy compression techniques that have the ability to use image features like corners.  The PDE approach involves representing an image with a small subset of data points on the spatial domain which can then be used to reconstruct the image via PDE-based interpolation techniques.  Due to the variety of linear and nonlinear PDEs that can be easily substituted into this framework, the PDE approach offers flexibility for both efficiency and accuracy. \cite{zimmer}.
+Hence, the project that we are interested in pursuing is creating impressionist versions of drawings through a genetic algorithm. Given an image, we would like to find the best matching image composed of $n$ strokes. The strokes themselves are composed of splines with $k$ points, $h$ hue, $o$ opacity, and $t$ thickness. The fitness function $f$ would then measure how different the variant (or child) is from the actual image. A simple example of such a variant would be $f$ that calcualtes the $L_2$-norm of the actual and evolved image.
 
-\begin{figure*}[!htb]
-\begin{center}
-\includegraphics[width=2in]{JPEG_example_100.jpg}\qquad
-\includegraphics[width=2in]{JPEG_example_001.jpg}
-\caption{JPEG compression artifacts.  The original image on left is compressed using JPEG at a rate of 1:100, leading to noticeable artifacts in the compressed image on the right. This demonstrates the need for less ``blind'' lossy compression formats. \cite{jpeg}}
-\label{jpegfig}
-\end{center}
-\end{figure*}
+While the given fitness function would suggest that the evolved image should look very close to the actual image, we hope that by limiting the number of strokes we can achieve an impresssionist effect. The idea is that if we want a certain effect or nature to be very present in the final product, we can potentially achieve this by making the building block have the attribute and additionally limit the number of blocks to prevent the effect from being saturated..
 
-We will implement an image compression format using PDEs in \textsc{Matlab}.  The overall approach utilizes PDE-based interpolation on a subset of original image data to reconstruct the image as best as possible (a process called \emph{inpainting}). Our implementation consists of three components: (1) a compression algorithm to select the points, (2) a storage format to store the points and associated data, and (3) a decompression algorithm to reconstruct the original image.  For our purposes, steps (1) and (3) are of particular interest due to their relevance to scientific computing.  For compression (1), we will use \emph{B-tree triangular coding (BTTC)}, a tree-based method that decomposes an image into triangles to identify significant \emph{corners}.  Corners are of particular interest because they occur where the edges of the image change direction, and thus allow for the identification of regions of change within the image without needing the redundancy of storing edges.  For storage (2), we will save the flattened indices and color values of the selected points in a matrix. For decompression (3), we will examine a variety of linear and non-linear PDEs to interpolate the compressed data.
+\section{Background and Related Work}
+Unfortuantely, the topic of interest has very little literature. As far as we know, the only similar work is the Genetic Programming: Evolution of Mona Lisa work by Roger Alsing. Essentially, the work took a DNA string(each gene represents a polygon with a certain color) and continued to mutate the DNA string closer to the actual image.  At each step, the mutated child would be compared to the actual image and if it had a higher fitness function ($L_2$-norm), the child would succeed the parent.  This simple process yielded a fairly acceptable rendering of the Mona Lisa with minor artifacts. Also, we note that the Mona Lisa didn't really use genetic algorithms to their full potential, since a population of images wasn't used. A single image was mutated closer to the actual image with each step, so the work is more similar to hill-climbing. We feel that by using a population and incorporating crossover methods, we can reach an optimum in much fewer steps, although computation is more expensive.
 
+A few things to note about the experiment are that it took a significant amount of time (most likely due to 0 cross overs and only a population size of two) but yielded a reasonable result. As a result, we are fairly certain that in our case, we should be able to yield a similar result at the very least. That is, if we use two points, we would have rectangles and hence it would not be surprising to get a decent result.
 
-\section{Images as functions}
+In other works that attempted to replicate Roger Alsing's work, more proper genetic algorithim approaches were taken which accounted for adjustable population size, selection, DNA mixing, etc. These approaches were able to achieve a faster convergence to the work of the Mona Lisa but the authors chose not to determine the amount of time necessary for a visually unindiscernible image to be generated. These works demonstrate our belief that adding crossovers and that of the like result in faster convergence then the straight forward hill climbing strategy of Alsing.
 
-In order to describe the approach mathematically, we represent images as functions.  An image with $c$ channels is a function $u: \Omega \rightarrow \mathbb{R}^c$, where $\Omega \subset \mathbb{R}^n$ is an $n$-dimensional image domain.  For our purposes, we will use color images with three channels for RGB such that $c = 3$ and $n = 2$.  In this framework, images take in a point $(x,y) \in \Omega$ and return an RGB triple.  A major benefit of the functional representation of images is that it allows for the use of image derivatives that will form the basis of the PDEs.  For example, an image $u : \Omega \rightarrow R$ has a partial derivative with respect to $x$ of $\partial_x u := u_x$ and a gradient $\nabla u$.
-
-Since the image functions are continuous but the image data is discrete, we must discretize the functional framework to apply it practically.  For an image $u$, we have a discrete pixel grid data matrix with width $N_1$ and height $N_2$.  If the image has width $a_1$ and height $a_2$ (i.e. support of $\Omega$ on $(0, a_1) \times (0,a_2)$), then the grid size is $h_1 = a_1 / N_1$ in the $x$-direction and $h_2 = a_2 / N_2$ in the $y$-direction.  To discretize the image, we transfer the continuous image domain $\Omega \in \mathbb{R}^2$ to the rectangular discrete domain $\Omega_{\text{dis}} = \{0,\dots,N_1-1\} \times \{0,\dots,N_2-1\}$ (sampling) and discretize the co-domain of image values $\mathbb{R}^3$ to the discrete color set $\{0,\dots,255\}^3$ (quantization).  Thus, the transformation is
-$$u : \Omega \rightarrow \mathbb{R}^3 \quad \Rightarrow \quad \tilde{u} : \Omega_{\text{dis}} \rightarrow \{0,\dots,255\}^3$$
-
-For convenience, we will represent RGB triples as intensities $[0,1]^3$.
+Finally, we would like to note that in contrast to these works we will not be mutating polygons. This differents in the uniformity of space covered as well as the distribution of the space. For example, given that we choose to use less than 4 to 5 points per spline, the space that we cover may be rather thin and limited. Essentially, the point we would like to elaborate is that while the focus of the problem remains similar, the problem space is extremely different.
 
 
 \section{Sampling for image compression}
