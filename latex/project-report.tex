@@ -452,24 +452,21 @@ stuff
 
 \section{Results}
 \subsection{Minimal Supervision}
-\[ \includegraphics[scale=0.22]{../figure_1.png} \includegraphics[scale=0.20]{../figure_2.png} \]
-Here, we have two results for running our 
-
 \begin{figure*}[!htb]
 \begin{center}
-\includegraphics[width=2in]{./img/lena256.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_0.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_25.png}\\
-\includegraphics[width=2in]{./img/lenaLI_50.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_100.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_200.png}\\
-\includegraphics[width=2in]{./img/lenaLI_400.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_800.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_1600.png}\\
-\includegraphics[width=2in]{./img/lenaLI_3200.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_6400.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_7050.png}\\
-\caption{PDE image interpolation using linear isotropic diffusion. Image lena256.png (top left) is compressed using BTTC with $\epsilon = 0.2$ to $\approx 13.5\%$ of the total pixel count (top middle).  The image interpolation then evolves and is plotted at 10 iterations $k=\{25,50,100,200,400,800,1600,3200,6400,7050\}$.  These time steps are displayed starting from the top right.  The stability threshold for the algorithm is reached after 7050 iterations, so the bottom left picture gives the final result. The three diffusion methods have a similar convergence path, although the convergence speeds vary.}
+\includegraphics[width=2in]{../groupB/M-1.png}\qquad
+\includegraphics[width=2in]{../groupB/M-200.png}\qquad
+\includegraphics[width=2in]{../groupB/M-424.png}\\
+\includegraphics[width=2in]{../groupB/M-1155.png}\qquad
+\includegraphics[width=2in]{../groupB/M-2826.png}\qquad
+\includegraphics[width=2in]{../groupB/M-3566.png}\\
+\includegraphics[width=2in]{../groupB/M-11910.png}\qquad
+\includegraphics[width=2in]{../groupB/M-14557.png}\qquad
+\includegraphics[width=2in]{../groupB/M-16996.png}\\
+\includegraphics[width=2in]{../groupB/M-21048.png}\qquad
+\includegraphics[width=2in]{../groupB/M-37608.png}\qquad
+\includegraphics[width=2in]{../groupB/M-42066.png}\\
+\caption{Here we have our unsupervised learning genetic algorithm running on the original Mona Lisa image.}
 \label{evolutionfig}
 \end{center}
 \end{figure*}
@@ -477,19 +474,61 @@ Here, we have two results for running our
 \pagebreak
 \begin{figure*}[!htb]
 \begin{center}
-\includegraphics[width=2in]{./img/lena256.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_0.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_25.png}\\
-\includegraphics[width=2in]{./img/lenaLI_50.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_100.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_200.png}\\
-\includegraphics[width=2in]{./img/lenaLI_400.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_800.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_1600.png}\\
-\includegraphics[width=2in]{./img/lenaLI_3200.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_6400.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_7050.png}\\
-\caption{PDE image interpolation using linear isotropic diffusion. Image lena256.png (top left) is compressed using BTTC with $\epsilon = 0.2$ to $\approx 13.5\%$ of the total pixel count (top middle).  The image interpolation then evolves and is plotted at 10 iterations $k=\{25,50,100,200,400,800,1600,3200,6400,7050\}$.  These time steps are displayed starting from the top right.  The stability threshold for the algorithm is reached after 7050 iterations, so the bottom left picture gives the final result. The three diffusion methods have a similar convergence path, although the convergence speeds vary.}
+\includegraphics[width=2in]{../groupB/P-1.png}\qquad
+\includegraphics[width=2in]{../groupB/P-28.png}\qquad
+\includegraphics[width=2in]{../groupB/P-117.png}\\
+\includegraphics[width=2in]{../groupB/P-192.png}\qquad
+\includegraphics[width=2in]{../groupB/P-286.png}\qquad
+\includegraphics[width=2in]{../groupB/P-412.png}\\
+\includegraphics[width=2in]{../groupB/P-1193.png}\qquad
+\includegraphics[width=2in]{../groupB/P-2250.png}\qquad
+\includegraphics[width=2in]{../groupB/P-3844.png}\\
+\includegraphics[width=2in]{../groupB/P-10679.png}\qquad
+\includegraphics[width=2in]{../groupB/P-39473.png}\qquad
+\includegraphics[width=2in]{../groupB/P-42159.png}\\
+\caption{Similar to before, we have the supervised learning genetic algorithm running on our Picasso.}
+\label{evolutionfig}
+\end{center}
+\end{figure*}
+
+
+\subsection{Maximal Supervision}
+
+\begin{figure*}[!htb]
+\begin{center}
+\includegraphics[width=2in]{../groupA/M-102.png}\qquad
+\includegraphics[width=2in]{../groupA/M-156.png}\qquad
+\includegraphics[width=2in]{../groupA/M-288.png}\\
+\includegraphics[width=2in]{../groupA/M-427.png}\qquad
+\includegraphics[width=2in]{../groupA/M-515.png}\qquad
+\includegraphics[width=2in]{../groupA/M-1161.png}\\
+\includegraphics[width=2in]{../groupA/M-1813.png}\qquad
+\includegraphics[width=2in]{../groupA/M-3178.png}\qquad
+\includegraphics[width=2in]{../groupA/M-4578.png}\\
+\includegraphics[width=2in]{../groupA/M-14630.png}\qquad
+\includegraphics[width=2in]{../groupA/M-35131.png}\qquad
+\includegraphics[width=2in]{../groupA/M-36522.png}\\
+\caption{Here we have our supervised learning genetic algorithm running on the original Mona Lisa image.}
+\label{evolutionfig}
+\end{center}
+\end{figure*}
+
+\pagebreak
+\begin{figure*}[!htb]
+\begin{center}
+\includegraphics[width=2in]{../groupA/P-126.png}\qquad
+\includegraphics[width=2in]{../groupA/P-199.png}\qquad
+\includegraphics[width=2in]{../groupA/P-629.png}\\
+\includegraphics[width=2in]{../groupA/P-1416.png}\qquad
+\includegraphics[width=2in]{../groupA/P-1889.png}\qquad
+\includegraphics[width=2in]{../groupA/P-3921.png}\\
+\includegraphics[width=2in]{../groupA/P-4321.png}\qquad
+\includegraphics[width=2in]{../groupA/P-6558.png}\qquad
+\includegraphics[width=2in]{../groupA/P-7792.png}\\
+\includegraphics[width=2in]{../groupA/P-8391.png}\qquad
+\includegraphics[width=2in]{../groupA/P-14741.png}\qquad
+\includegraphics[width=2in]{../groupA/P-49320.png}\\
+\caption{Similar to before, we have the supervised learning genetic algorithm running on our Picasso.}
 \label{evolutionfig}
 \end{center}
 \end{figure*}
