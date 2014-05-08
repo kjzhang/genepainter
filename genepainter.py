@@ -6,6 +6,7 @@ import scipy.interpolate
 import time
 import copy
 import datetime
+import sys
 
 from PIL import Image
 from matplotlib.backends.backend_agg import RendererAgg
@@ -387,9 +388,6 @@ class GenePainter(object):
 
             #compete_population = population + new_candidates
 
-            # pick the best
-            #surviving_children = sorted(compete_population, key=lambda dna_strand: dna_strand.fitness)[:population_size]
-
             self.population = sorted(self.population, key=lambda strand: strand.fitness)
             self.population = self.population[:population_size]
 
@@ -399,10 +397,9 @@ class GenePainter(object):
             min_error = curr_min_error
             print "Error Change:", error_change
 
-            #if error_change > 0.0:
+            if error_change > 0.0:
+            	print "FITNESS:", [dna.fitness for dna in self.population]
 
-
-            #print [dna.fitness for dna in self.population]
             num_iter += 1
 
             if num_iter > 100 and error_change > 0:
@@ -431,8 +428,11 @@ def sample_mutation():
 
 
 if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: %s image" % sys.argv[0])
+        sys.exit(-1)
 
-    source = read_image('images/ML129.png')
+    source = read_image(sys.argv[1])
     p = GenePainter(source)
     p.paint()
 

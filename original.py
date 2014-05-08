@@ -5,6 +5,7 @@ import random
 import scipy.interpolate
 import time
 import copy
+import sys
 
 from PIL import Image
 from matplotlib.backends.backend_agg import RendererAgg
@@ -202,14 +203,18 @@ class GenePainter(object):
 
             if error_change > 0.0:
                 for z in xrange(10):
-                    dump_dna(self.population[0].strokes, 'original ' + str(num_iter) + '-' + str(z) + '.txt')
+                    dump_dna(self.population[0].strokes, 'original ' + str(num_iter) + '-' + str(z) + str(np.random.random()) + '.txt')
 
         plt.imshow(self.population[0].render(), interpolation='none')
         plt.show()
 
 if __name__ == "__main__":
 
-    source = read_image('images/ML129.png')
+    if len(sys.argv) < 2:
+        print("Usage: %s image" % sys.argv[0])
+        sys.exit(-1)
+
+    source = read_image(sys.argv[1])
 
     p = GenePainter(source)
 
