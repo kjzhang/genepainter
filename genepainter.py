@@ -12,8 +12,6 @@ from PIL import Image
 from matplotlib.backends.backend_agg import RendererAgg
 from matplotlib.lines import Line2D
 
-from multiprocessing import Pool
-
 
 ### STROKE PARAMETERS
 
@@ -344,12 +342,6 @@ class GenePainter(object):
         self.population = []
 
     def paint(self):
-
-        pool = Pool(processes=4)
-
-        image = plt.imshow(self.source, interpolation='none', animated=True)
-        plt.draw()
-
         for _ in xrange(population_size):
             dna = DNAImage(self.shape)
             dna.update_fitness(self.source)
