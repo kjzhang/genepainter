@@ -271,502 +271,63 @@ Go to step 3.
 
 The algorithm requires the image dimensions to be square with edge size $2^m+1$ for some $m$. If the image size is invalid, then each sides are padded by zeros to one plus the next power of two. The runtime complexity for the algorithm is an efficient $O(n \log n)$ for an image with $n$ pixels, and we demonstrate that BTTC is able to accurately choose points in areas of high curvature, since the mean squared error (MSE) is bounded by $\epsilon^2$.  For additional details, see \cite{distasi}.
 
-\section{Compressed storage methods}
+\section{Metrics for Similarity}
+The metric by which we determine similarity in this paper are the $L_1$-norm and the $L_2$-norm. Essentially, given image A and image B, the fitness function for the $L_1$-norm variant would be defined as
+\[ \sum\limits_{i,j} |A_{i,j} - B_{i,j}| \]
+which intuitively simply means that the fitness function accounts for error, weighting the color offset for each pixel the same.
+For the $L_2$-norm version of the fitness function, we have
+\[ \sum\limits_{i,j} (A_{i,j} - B_{i,j})^2 \]
+which instead weights pixel offsets that are far off much more. While we do test both metrics for similarity, it may seem intuitively clear why most image processing algorithms use the $L_2$-norm. Rather thann weight all offsets the same, the farther a single pixel is off, the more heavily it is weighted. For example, if an image is off by one shade of red throughout the entire image, it is considered better than an image that has a large large color offset for a small region of the image.
 
-The BTTC algorithm returns a unique set of points that define the triangles characteristic of the image.  Thus, we need to store the indices of these points and the values of the three color channels associated with each point. With $n_p$ points, we have matrix of size $n_p \times 4$ (3 color channels and 1 index for each point), with 2 additional values for the image dimensions, which is significantly smaller than the raw image size $N_1 \times N_2 \times 3$ for $n_p \ll N_1 \times N_2$.  Our data can be compressed even further with standard compression techniques such as LZW, but we will focus on the other parts of the process.
+\section{Rendering the Image}
+To render the image of splines, the following method were considered. For every given point in the image, we determined the closest point on each and every spline curve to the point using the methods detailed by Wang et. al \cite{wang}. Using this distance and the width of the spline, we can determine whether the pixel would have been covered by a certain spline. Testing this method via Python, we determined that over 50 splines and an image of size 256 x 256, each complete rendering of the image took approximately 3 seconds on a 4.4Ghz i-3570k. Further testing yielded that the bottleneck factor was not the $L_2$-norm being computed but rather the actual rendering of the spline. In essence, for an image of size $MN$ with $K$ splines, it required $MNK$ iterations of the composite Newton method described in the paper.
 
-%------------------------------------------------
+The next approach to achieve rendering in a computatably feasible manner was to draw the splines and then dilate the pixels of the spline. While it appears to have the same worst case performance, through the use of optimized packages, the rendering was achieved in approximately 0.01 seconds. We deemed that this computation time was sufficient for our purposes. 
 
-\section{Decompression via PDE image interpolation}
+\section{General Approach}
+Our general approach was to create a set of strokes $s$, each which represented a spline with a certain width, color, and opacity. These strokes would undergo the process of evolution as dictated by the genetic algorithm which would ultimately result in a set of improved strokes $\hat{s}$ that would resemble the original image.
 
-%Since our compression algorithm will give us the subset of points used to interpolate, it makes sense to first develop an understanding of PDE image interpolation to identify which points we need.
+\subsection{Genes}
+The representation of the genes in this work was the stroke. These genes contained a list of points with x,y coordinates, determining each location of a sequential point for the spline. We restricted the number of points to be greater than 2 but less than 5. In the case that the points numbered from 2 to 3, the points did not actually form a spline and as a result, were connected via a straight line. We limited the number of points to be less than 5 to avoid resulting in a stroke that covered the entire image. All the points were generated via a random uniform distribution whose ranges were capped by the maximum width and maximum height of the image.  Additionally, the gene contained information about the color in the standard RGB format with a range of integer values of 0 to 255 for each color. All 3 channels had their values generated initially via a random uniform distribution. To deal with the problem of layering strokes, each stroke was also assigned an alpha value to add the factor of opacity into the painting. The alpha value was contained between the values of 0.25 and 1.0. The alpha value was also generated initially via a random uniform distribution. Finally, to account for the width of the stroke, a width factor was included in the stroke. To avoid drawing too thin or too wide, the width of the stroke was generate uniformly between 5 to 15 percent of the minimum of the height and width of the image.
 
-We will use PDE interpolation as a means of \emph{inpainting}.  Classical image inpainting refers to retouching or recovering images with deteriorated or missing regions, a method typically used to repair small defects in old or damaged images. In contrast, we will use inpainting to reconstruct an image from compressed data, consisting of a sparse sample of pixels from the original image.
+\subsection{Population and Survival Policy}
+Unlike the Alsing work, we choose to keep both an adjustable population of adults and children. In our tests with a 256 x 256 image, we used population sizes ranging from 30 to 100 for both children and for the parents. In addition, we added a survival policy to recently mutated children to give them a competitive advantage in the testing. That is, some children, regardless of fitness, are spared from the filtering process for an adjustable period of rounds. The intuition behind employing such a policy was to prevent our program from dropping into a local minimum. The only disadvantage of the policy is the sacrificed additional resources that are necessary to keep the less fit offspring alive and allowing them to reproduce.
 
-\subsection{General approach}
+\subsection{Mutation}
+We incorporate multiple levels of mutation to provide for the maximum level of adjustability. At the highest level, we have that each gene which is a stroke can be mutated via addition, editing, or deletion. In the case of addition which has an adjustable rate parameter, we append a completely random new stroke based on the same initial generation parameters to the DNA sequence. Given the opacity parameters, the ordering should not matter. In the case of deletion, we can choose to delete one of the genes or strokes completely from the sequence. Finally, in the case of editing, we can choose to replace the gene with a completely new gene, i.e. addition and deletion combined.
+However, we note the mutation for editing may be too drastic and hence, we have a separate level of mutations. Instead of simply changing the entire stroke, we mutate specific attributes of the stroke. This method should prove to be useful when trying to fine tune an image instead of attempting to completely start fresh. We structure the random generation by creating normal distributions centered around the current values for the locations, width, opacity, and color with an adjustable standard deviation. Essentially, instead of randomly guessing with no bias, we attempt to shift the stroke slightly and see if we can find any improvements nearby. Additionally, in this case, we can also choose to remove or add points in the spline of the stroke.
 
-The problem is to reconstruct an image on the image domain $\Omega \in \mathbb{R}^3$ that is defined by the unknown function  $v(x,y) : \Omega \rightarrow \mathbb{R}^3$ \cite{galic}.  We know the values of $v$ on some subset of points $\Omega_1 \subset \Omega$.  The goal is to find an interpolating function $u(x,y) : \Omega \rightarrow \mathbb{R}^3$ that is smooth, identical to $v$ on $\Omega_1$, and a good approximation of $v$ in $\Omega \backslash \Omega_1$.
+\subsection{Crossovers}
+The crossoveres of the DNA were implemented in a couple of methods.
 
-To solve for $u$, we will update the image iteratively in an evolutionary setting that varies with a parameter $t$ (``time''). Thus, we have a process $u(x,y,t) : \Omega \times \mathbb{R} \rightarrow \mathbb{R}^3$.  The process's steady state is the desired interpolating function, achieved at $t = \infty$.  However, it will converge to within an acceptable range of the function within a maximum time $T$.  The process is initialized with a function $f : \Omega \rightarrow \mathbb{R}^3$ that is identical to $v$ on $\Omega_1$ and arbitrary on $\Omega \backslash \Omega_1$, for example
-\begin{equation}
- f(x,y) = \left\{
-     \begin{array}{lr}
-       v(x,y) & (x,y) \in \Omega_1\\
-       0 & \text{otherwise}
-     \end{array}
-   \right.
-\end{equation}
+First, the most naive method we chose to use was to pick two DNA strands and we uniformly randomly picked genes or strokes from both strands. Additionally, we pick one strand randomly over the other to determine the length of the strand. However, we expect such a method to yield a random data that does not significantly improve the result. That is, given that a group of strokes together are what most likely cause the fitness to do well as a whole, removing one of these from the group or merging two groups will not necessarily improve the fitness unless they are a large mutually exclusive set.
 
-To evolve the process $u(t)$, we want to vary the points in $\Omega \backslash \Omega_1$ according to some PDE system while holding the points in $\Omega$ constant.  To enforce this condition, we define the characteristic function on $\Omega_1$, $c: \Omega \rightarrow \mathbb{R}$
-\begin{equation}
- c(x,y) = \left\{
-     \begin{array}{lr}
-       1 & (x,y) \in \Omega_1\\
-       0 & \text{otherwise}
-     \end{array}
-   \right.
-\end{equation}
-
-Thus, if we evolve the system using differential operator $L(u)$ and initial value $f$, we have the system
-\begin{equation}
-\partial_t u = (1-c(x))L(u) - c(x)(u-f)
-\end{equation}
-\begin{equation}
-u(x,y,0) = f(x,y)
-\end{equation}
-with reflecting (homogenous Neumann) boundary conditions.  To find the desired interpolating function, we solve for the steady state when $\partial_t u = 0$
-\begin{equation}
-(1-c(x))L(u) - c(x)(u-f) = 0
-\end{equation}
-Within $\Omega_1$, $c(x,y) = 1$, so we impose Dirichlet boundary conditions given by the interpolation data on $\Omega_1$ to ensure that the known points of the image do not change.  In $\Omega \backslash \Omega_1$ where $c(x,y) = 0$, we must have $L(u) = 0$, which implies that this PDE is the steady state of the evolution equation 
-\begin{equation}
-\partial_t u = L(u)
-\label{differential}
-\end{equation}
-Thus, the approach is to choose a PDE for $L(u)$ to govern the evolution process and then run the process through time $t$ using numerical techniques until an acceptable approximation of the steady state is achieved.  This will involve time steps of size $dt$ from $t = 0$ to $T$, with a total of $K = T/dt$ steps.  The PDEs will be appropriately discretized and approximated for each iteration.
-
-\subsection{Diffusion using PDEs}
-
-The task of using information from a subset of data points to reconstruct an image is equivalent to physical diffusion, a process that equalizes concentration differences while preserving total mass.  We imagine an image $u : \Omega \rightarrow \mathbb{R}^3$ to be a concentration distribution over the image domain and we wish to preserve average color value for each channel.  Therefore, we will ``evolve'' the image system by moving through time using diffusion dynamics.
-
-A system with concentration gradient $\nabla u$ will cause a flux of concentrations $j$ according to Fick's law
-\begin{equation}
-j= - D\cdot \nabla u
- \label{fick}
-\end{equation}
-where $D$, the diffusion tensor, gives the proportional relation between the flux and gradient.  $D$, $j$ and $\nabla u$ therefore determine the type of diffusion: constant $D$ characterizes \emph{homogenous, linear} diffusion, while $D$ that is a function of $u$ gives \emph{nonlinear} diffusion.  The diffusion is \emph{isotropic} if $j$ and $\nabla u$ are parallel, while it is \emph{anisotropic} if they are not.
-
-To preserve mass, we require the continuity equation
-\begin{equation}
-\partial_t u = - \text{div} j
- \label{cont}
-\end{equation}
-where $t$ denotes time.  Combining \eqref{cont} with \eqref{fick} results in the diffusion or heat equation
-\begin{equation}
-\partial_t u = \text{div} (D \cdot \nabla u)
- \label{diffusion}
-\end{equation}
-
-\subsubsection{Boundary conditions}
-To ensure that total mass is preserved, we use homogenous Neumann boundary conditions on $u(x,y,t)$ to give reflecting/periodic boundaries, i.e.
-\begin{equation}
-\partial_n u = 0 \qquad \text{on } \partial \Omega \times \mathbb{R}
- \label{boundary}
-\end{equation}
-where $\partial \Omega$ is the image boundary and $n$ is the outer normal vector of $\partial \Omega$.  This effectively mirrors the image at the boundary by introducing ``ghost'' pixels with the same value as their real neighbor.  For example, on the left edge of the image, we have $u_{j,0} = u_{j,1}$.  This is preferable to Dirichlet boundary conditions that set values outside $\Omega$ to 0 since it allows for preservation of mass (average color value).
-
-This framework is flexible and allows us to consider several different types of diffusion for the evolution.  Here, we try linear isotropic diffusion, nonlinear isotropic diffusion, and nonlinear anisotropic diffusion.
-
-\subsubsection{Linear isotropic diffusion}
-Linear isotropic diffusion is the easiest case since it has flux proportional to the gradient, meaning the diffusion tensor is the identity matrix: $D = I_2$.  Plugging this into the diffusion equation \eqref{diffusion} gives 
-\begin{align}
-\partial_t u &= \text{div}(\nabla u) \\
-&= \triangle u\\
-&= u_{xx} + u_{yy}
-\end{align}
-Thus, we have an elliptic PDE that we can solve numerically.  Note that in this case there is an analytical solution given by the convolution integral of $f$ with a Gaussian.  However, we will consider the numerical solution to set up our framework.
-
-For a numerical solution, we need to discretize the diffusion equation.  We first approximate $\partial_t u$ over time step $dt$
-\begin{equation}
-\partial_t u \approx \frac{u_{i,j}^{k+1}-u_{i,j}^k}{dt}
-\end{equation}
-and then approximate the two partial derivatives with the second order approximation
-\begin{equation}
-u_{xx} \approx \frac{u_{i-1,j}^{k}-	2u_{i,j}^k + u_{i+1,j}^k}{h_1^2}
-\end{equation}
-Combining the two and solving for $u_{i,j}^{k+1}$ gives the familiar 5-point stencil
-\begin{eqnarray}
-u_{i,j}^{k+1} &=& u_{i,j}^{k}+ dt \cdot \Bigg[ \left(-\frac{2}{h_1^2} -\frac{2}{h_2^2}\right)u_{i,j}^{k} + \frac{1}{h_1^2}u_{i+1,j}^{k} \nonumber\\
-& &+  \frac{1}{h_1^2}u_{i-1,j}^{k} +  \frac{1}{h_2^2}u_{i,j+1}^{k} +  \frac{1}{h_2^2}u_{i,j-1}^{k}\Bigg]
-\end{eqnarray}
-Thus, we can write this approximation as
-\begin{equation}
-u_{i,j}^{k+1} = u_{i,j}^{k} + D_2 u_{i,j}^{k} dt
-\end{equation}
-where $D_2$ is the differential matrix given by the stencil in Table \ref{listencil}.  Note that when $h_1 = h_2$, the center coefficient becomes the usual $-4 \frac{dt}{h^2}$.
-
-\begin{table}[h]
-\caption{5 point stencil for linear isotropic diffusion}\label{listencil}
-\begin{tabular}{| c | c | c | c |}
-\hline
-$0$ & $\frac{dt}{h_2^2}$ & $0$ \\
-\hline
-$\frac{dt}{h_1^2}$ & $1-2\frac{dt}{h_1^2} -2\frac{dt}{h_2^2} $ & $\frac{dt}{h_1^2}$ \\
-\hline
-$0$ & $\frac{dt}{h_2^2}$ & $0$ \\
-\hline
-\end{tabular}
-\end{table}
-
-Boundaries are accounted for using the homogenous Neumann boundary conditions on the edges of the image domain and the Dirichlet boundary conditions for the interpolation points, as described above.
-
-We need to also ensure that the diffusion filter is well-posed and yields valid results.  In the context of images, we need to make sure that the function values of $u^k$ remain in the codomain of the image (i.e. in $\{0, \dots, 255\}$ for each color channel).  The result for the linear isotropic case is given in \cite{zimmer}.  We need to impose a discrete that maximum-minimum principle to ensure the stencil weights sum to 1 and are all non-negative:
-\begin{equation}
-\min_{m,n} f_{m,n} \leq u_{i,j}^k \leq \max_{m,n} f_{m,n} \qquad \forall k \geq 0, \; \forall i,j \in \Omega_{\text{dis}}
-\end{equation}
-For this stencil, the only weight that could be negative is the center.  We therefore impose the condition
-\begin{equation}
-dt \leq \frac{1}{\frac{2}{h_1^2}+\frac{2}{h_2^2}}
-\end{equation}
-which simplifies to $dt \leq \frac{1}{4}$ when $h_1 = h_2 = 1$, as is typical.
-
-The Laplacian $L(u) = \triangle u$ produces homogenous diffusion due to its Gaussian smoothing.  It can be extended to a higher can order differential operators, such as the biharmonic $L(u) = -\triangle^2 u$, to achieve more accurate results at the expense of simplicity.  However, only the second order Laplacian allows for a maximum-minimum principle.
-
-While the smoothing of linear isotropic diffusion is useful in removing noise, it also can remove useful data such as edges.  To improve, we need to take the geometry of the image into account by using nonlinear methods.
-
-\subsubsection{Nonlinear isotropic diffusion}
-
-Nonlinear isotropic diffusion processes are governed by $L(u) = \text{div}(g|\nabla u|^2) \nabla u)$.  Plugging into \eqref{differential} gives
-\begin{equation}
-\partial_t u =  \text{div}(g(|\nabla u|^2) \nabla u)
-\label{nonlindiff}
-\end{equation}
-where $g$ is a diffusivity function that aims to reduce smoothing at edges where $|\nabla u|^2$ is large.  A common choice is the Perona-Malik diffusivity function \cite{galic}
-\begin{equation}
-g(|\nabla u|^2) = \frac{1}{1+ |\nabla u|^2/\lambda^2}
-\end{equation}
-with some contrast parameter $\lambda > 0$.  We can see then that this approach is isotropic because it uses scalar-valued diffusivity.  Unlike the linear isotropic approach, however, 	the nonlinear model is edge-enhancing \cite{zimmer}.  The edge-enhancing properties can cause some problems, however, since it will misinterpret noise as a small edge.  Furthermore, the well-posedness of the problem (i.e. evolution converges to a unique solution) is not guaranteed.  To solve these issues, we will introduce a regularization by convoluting the gradient $\nabla u$ with a Gaussian: $\nabla u_\sigma = K_\sigma \cdot \nabla u$.  The 	regularized nonlinear diffusion equation is then
-\begin{equation}
-\partial_t u =  \text{div}(g(|\nabla u_\sigma|^2) \nabla u)
-\label{nonlindiff2}
-\end{equation}
-In order to use the same framework as the linear isotropic implementation, we need to discretize the filter.  We can rewrite the diffusion equation \eqref{nonlindiff2} as
-\begin{equation}
-\partial_t u =  \partial_x(g(|\nabla u|^2) \partial_x u) +  \partial_y(g(|\nabla u|^2) \partial_y u)
-\end{equation}
-Following the long derivation outlined in \cite{zimmer} results in the discretization
-\begin{equation}
-\frac{u^{k+1} - u^k}{dt} = A(u^k)\cdot u^k
-\label{nonlineisodisc}
-\end{equation}
-where $A(u^k)$ is a function that evaluates how similar each pixel is to its neighbors.  Equation \eqref{nonlineisodisc} is solvable in two ways, either an explicit scheme that is directly solvable for $u_{i,j}^k$ or a semi-implicit scheme that requires solving a linear system of equations.  The semi-implicit scheme has the advantage of allowing arbitrarily large time steps $dt$ under well-posedness conditions.  The semi-implicit scheme is given by
-\begin{equation}
-u^{k+1} = (I - dt\cdot A(u^k))^{-1}\cdot u^k = Q(u^k)\cdot u^k
-\end{equation}
-which we will use in our implementation.  
-
-While the nonlinear isotropic method successfully incorporates edges, it has the drawback of preserving noise at edges.  To improve on this, we need an anistropic method where the flux $j$ is not parallel to $\nabla u$.  This will result in a filter that smooths along edges but not across them, thus reducing noise at edges.
-
-\subsubsection{Nonlinear anisotropic diffusion}
-
-Nonlinear anisotropic diffusion aims to smooth along edges but reduce smoothing across them by rotating the flux towards the orientation of edges.  In the edge-enhancing diffusion (EED) approach, we construct a modified diffusion tensor $D(\nabla u_\sigma)$.  This EED diffusion tensor has one eigenvector parallel to $\nabla u_\sigma$ with corresponding eigenvalue $g(|\nabla u_\sigma|^2)$ and all other eigenvectors orthogonal to $\nabla u_\sigma$ with eigenvalues of 1.  Following the derivation in \cite{zimmer} and \cite{weickertEED} we get the governing relationship $L(u) = \text{div}(g(\nabla u_\sigma \nabla u_\sigma^T) \nabla_u)$ \cite{galic}.  The evolution process then has the difference equation
-\begin{equation}
-\partial_t u =  \text{div}(g(\nabla u_\sigma \nabla u_\sigma^T) \nabla_u)
-\label{anisodiff}
-\end{equation}
-The discretization and corresponding stencil for EED is quite complex and is given in \cite{weickertEED}.  We adapt the algorithm developed by Weickert et al. for noisy image filtering to our interpolation framework with appropriate boundary conditions.
+The other approach we attempt is to swap out entire regions from the DNA strand in an attempt to transfer entire groups of strokes that work well together.
 
 \section{Implementation}
+We detail our actual implementation below.
+\subsection{Downsampling}
+One of the key limitations that we soon realized was the running time required to generate reasonable results. Hence, given these limitations, it would be computationally infeasible to directly apply genetic algorithms to large pictures. However, we can instead reduce the size of the image to a much smaller level that allows for quick processing. After running the algorithm on the less detailed but similar representation, we can enlarge the image to the next level along with the doubling the sizes of the strokes.
+Intuitively, this would allow us to determine the general strokes necessary to produce the key features of the picture quickly. The remaining details which would normally take an exorbitant amount of time to be fine tuned would be done much quicker via a narrowed range of mutation as described above. We detail the pseudo code below.
 
-We implement the PDE-based compression for use on an $m \times n$ image with 3 color channels.
-
-\subsection{Sample Selection Methods}
-We implemented two forms of selecting pixels for compression.  The first method is random point selection that randomly samples unique $n_p$ pixels from the $m\cdot n$ pixels in total.  Random sampling is a useful metric to compare against other compression techniques and is the fastest possible compression method.
-
-As our second method of selecting sample pixels, we implemented BTTC as described in CITATION HERE. The image is padded to one more than the next highest power of two, and then recursively subdivided into right triangles until an error threshold is satisfied for each pixel in each triangle. For the stack objects we used the Java interface with \textsc{Matlab}, so the implementation has a dependency on Java.  The function returns a list of flattened indices corresponding to the corner pixels selected.
-
-See BTTC\_filter.m, BTTC\_G.m, and preprocess\_BTTC.m for implementation. The filter function takes in an image and an error threshold, and returns a mask for the image and a list of indices corresponding to the selected triangle corners. The G function interpolates the pixels within each triangle, and the preprocess script demos the BTTC script and writes the data to file. See Figure 2.
-
-\begin{figure*}[!htb]
-\begin{center}
-\includegraphics[width=2in]{lena512.png}\qquad
-\includegraphics[width=2in]{lena512-random-mask-1.png}\qquad
-\includegraphics[width=2in]{lena512-bttc-mask-1.png}
-\caption{Random vs. BTTC sample selection. For lena512.png, both images are sampled at $\approx 7.62\%$ of the total pixel count. The left image is generated with uniform random sampling. For BTTC on the right, we chose $\epsilon = 0.15$. Note that the BTTC implementation selects dense clusters of points along important edge features in the image, while areas with minor gradients have relatively sparse sampling.}
-\label{bttcselectionfig}
-\end{center}
-\end{figure*}
-
-\subsection{PDE Decompression}
-Our decompression scheme involves first initializing the sampled pixels as seed points on an empty image with the same dimensions as the initial image. For the remaining pixels on the image, we can either leave them as white pixels or interpolate based on our seed pixels. With an additional interpolation step in our initialization, our inpainting should converge faster. Both methods should converge to similar images after the inpainting process, but the interpolation can introduce additional artifacts into the image, especially when used with the nonlinear EED method. One interpolation scheme we implemented for initializing the empty pixels is to simply clone the nearest seed pixel. We compute the Delaunay triangulation on the seed point indices and then clone each empty pixel from the closest vertex. The result is a shaded Voronoi diagram based on the seed pixels.
-
-We implemented three versions of PDE-based diffusion methods described previously: linear isotropic (homogenous), nonlinear isotropic (Perona-Malik), and nonlinear anisotropic (EED). Our implementation of the first two methods were based on our own interpretation of the numerical solutions described in \cite{galic} and \cite{peronamalik}. Our nonlinear anisotropic edge-enhancing diffusion implementation is adapted from a coherence filter implementation outlined in \cite{kroon}; the EED diffusion matrix is generated from a downloaded library function.
-
-\begin{figure*}[!htb]
-\begin{center}
-\includegraphics[width=2in]{lena512-random-voronoi-1}\qquad
-\includegraphics[width=2in]{lena512-BTTC-voronoi-1}\qquad
-\includegraphics[width=2in]{castle512-BTTC-voronoi-1}
-\caption{Initial Interpolation of Seed Pixels. A Delaunay triangulation is generated from the seed pixels, and the remain pixels are cloned after matching to a seed with a nearest neighbor search. The resulting image is effectively the Voronoi diagram of the seed points. From left to right, we have lena512 (random sampling), lena512 (BTTC sampling), castle512 (BTTC sampling) at $\epsilon = 0.25$ and $6.92\%$. Note that with BTTC, important features are more well defined.}
-\label{voronoifig}
-\end{center}
-\end{figure*}
-
-\subsection{Stopping Criteria}
-
-Our goal is to estimate the steady state of the inpainting evolution $u(x,y,t)$ as $t \rightarrow \infty$ in finite time $T$.  The steady state occurs when $\partial_t u = 0$, and thus we want the stopping criteria to evaluate when change from one iteration to the next becomes small enough.  The threshold we use is the percentage of pixels deemed to be stable at a given time.  We define stability as a function
-\begin{equation}
-s(u^k, u^{k+1}) = \frac{1}{\Omega_{\text{dis}}} \sum_{(i,j) \in \Omega_{\text{dis}}} \phi(u_{i,j}^{k+1} - u_{i,j}^{k})
-\end{equation}
-where $\phi$ is the indicator function for whether the length of the input is below a value $\epsilon > 0$
-\begin{equation}
- \phi(x) = \left\{
-     \begin{array}{lr}
-       1 & \text{if } ||x||_2 \leq \epsilon \\
-       0 & \text{otherwise}
-     \end{array}
-   \right.
-\end{equation}
-Thus, $s(u^k, u^{k+1})$ returns the number of stable pixels divided by the total number of pixels at time $k+1$.  We choose a threshold proportion $p \in [0,1]$ such that we terminate iterations at time $k+1$ if $s(u^k, u^{k+1}) > p$.
-
-\subsection{Measuring Error}
-To measure the error, we will use mean-squared error (MSE).  For original image $v$ and approximation $u$, MSE is defined as
-\begin{equation}
-\text{MSE}(u,v) = \frac{1}{|\Omega_{\text{dis}}|} \sum_{j=1}^{N_1} \sum_{i=1}^{N_2} ||u(i,j) - v(i,j)||_2^2
-\label{MSE}
-\end{equation}
-An alternative is the average-absolute difference (AAD), which is defined as,
-\begin{equation}
-\text{AAD}(u,v) = \frac{1}{|\Omega_{\text{dis}}|} \sum_{j=1}^{N_1} \sum_{i=1}^{N_2} ||u(i,j) - v(i,j)||_1
-\label{AAD}
-\end{equation}
-
-\begin{figure*}[!htb]
-\begin{center}
-\includegraphics[width=2in]{./img/lena256.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_0.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_25.png}\\
-\includegraphics[width=2in]{./img/lenaLI_50.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_100.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_200.png}\\
-\includegraphics[width=2in]{./img/lenaLI_400.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_800.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_1600.png}\\
-\includegraphics[width=2in]{./img/lenaLI_3200.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_6400.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_7050.png}\\
-\caption{PDE image interpolation using linear isotropic diffusion. Image lena256.png (top left) is compressed using BTTC with $\epsilon = 0.2$ to $\approx 13.5\%$ of the total pixel count (top middle).  The image interpolation then evolves and is plotted at 10 iterations $k=\{25,50,100,200,400,800,1600,3200,6400,7050\}$.  These time steps are displayed starting from the top right.  The stability threshold for the algorithm is reached after 7050 iterations, so the bottom left picture gives the final result. The three diffusion methods have a similar convergence path, although the convergence speeds vary.}
-\label{evolutionfig}
-\end{center}
-\end{figure*}
-\pagebreak
-\begin{figure*}[htb]
-\begin{center}
-\includegraphics[width=2in]{./img/lenaLI_diff_orig.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_diff_0.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_diff_25.png}\\
-\includegraphics[width=2in]{./img/lenaLI_diff_50.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_diff_100.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_diff_200.png}\\
-\includegraphics[width=2in]{./img/lenaLI_diff_400.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_diff_800.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_diff_1600.png}\\
-\includegraphics[width=2in]{./img/lenaLI_diff_3200.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_diff_6400.png}\qquad
-\includegraphics[width=2in]{./img/lenaLI_diff_7050.png}\\
-\caption{PDE image interpolation using linear isotropic diffusion.  Difference between the original image and the interpolated images displayed in Fig \ref{evolutionfig}. Black denotes areas of large differences while white denotes areas of small differences. Note that with the BTTC implementation, the interpolated image approximates the original image well at areas of high gradient.}
-\label{evolutiondifffig}
-\end{center}
-\end{figure*}
-
-\begin{figure*}[htb]
-\begin{center}
-
-\includegraphics[width=2in]{lena2.png}\qquad
-\includegraphics[width=2in]{lena1.png}\\
-\includegraphics[width=2in]{./img/lena-512-bttc-015-clean-max.png}\qquad
-\includegraphics[width=2in]{./img/lena-512-bttc-015-clean-max-NL-1-100.png}\qquad
-\includegraphics[width=2in]{./img/lena-512-bttc-015-clean-EED.png}
-\caption{PDE interpolation convergence.  On the top, we have linear and nonlinear diffusion on the random pixel sampling. On the bottom, three diffusion methods are run on the image until convergence. Note that the edges are preserved much better. From left to right are the results for linear isotropic, nonlinear isotropic, and nonlinear anisotropic. MSE: 131.9 (Linear), 127.8 (Nonlinear), 127.7 (EED)}
-\label{compfig}
-\end{center}
-\end{figure*}
-
-\subsection{Comparison of Interpolation Methods}
-The results for the three different diffusion techniques after convergence on BTTC points ($\epsilon = 0.15$) are displayed in Fig \ref{compfig}.  We can see that the results are pretty similar, but the image quality improves from left to right.  This is especially evident in the boundary of the image, where the linear isotropic contains some artifacts but these disappear in the nonlinear anisotropic.  The number of iterations until convergence also increases from left to right.  However, this comes at a tradeoff with time efficiency and simplicity.  Each iteration of the nonlinear anisotropic algorithm, for example, took over 10 times as long as an iteration for the linear isotropic.  All three methods had rapid convergence in solution, as show in Fig \ref{MSEFig}.
-\begin{figure*}[hb]
-\begin{center}
-\includegraphics[width=5in]{./img/mse.eps}\qquad
-\caption{MSE Convergence.}
-\label{MSEFig}
-\end{center}
-\end{figure*}
-
-\subsection{See MATLAB/README.txt}
-
-
-%----------------------------------------------------------------------------------------
-%	MATERIALS AND METHODS
-%----------------------------------------------------------------------------------------
-
-%% Optional Materials and Methods Section
-%% The Materials and Methods section header will be added automatically.
-
-%\begin{materials}
-%Suspendisse viverra eleifend nulla at facilisis. Nullam eget tellus orci. Cras sit amet lorem velit. Maecenas rhoncus pellentesque orci eget vulputate. Phasellus massa nisi, mattis nec elementum accumsan, blandit non neque. In ac enim elit, sit amet luctus ante. Cras feugiat commodo lectus, vitae convallis dui sagittis id. In in tellus lacus, sed lobortis eros. Phasellus sit amet eleifend velit. Duis ornare dapibus porttitor. Maecenas eros velit, dignissim at egestas in, tincidunt lacinia erat. Proin elementum mi vel lectus suscipit fringilla. Mauris justo est, ullamcorper in rutrum interdum, accumsan eget mi. Maecenas ut massa aliquet purus eleifend vehicula in a nisi. Fusce molestie cursus lacinia.
-%
-%\begin{definition}
-%A bounded function $\theta$ is a weak solution of QG if for any
-%$\phi\,\epsilon\,
-%C_0^{\infty}(\fdb\times\mathbb{R}\times[0,\vep])$ we have
-%\begin{eqnarray}
-%&&  \int_{\mathbb{R}^+\times\fd\times\mathbb{R}} \hspace{-25pt}
-% \theta(x,y,t)\, \pr_t \phi
-%\,(x,y,t) dy dx dt+\nonumber\\
-%  & +&\int_{\mathbb{R}^+\times\fd\times\mathbb{R}}
-%\hspace{-26pt} \theta\,(x,y,t) u(x,y,t)\cdot\nabla\phi\,(x,y,t)
-%dydxdt = 0 \label{weaksol} \end{eqnarray}
-%where $u$ is determined previously.
-%\end{definition}
-%
-%Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Mauris eu sapien nunc, sit amet accumsan dui. Nulla ac diam ut nunc placerat semper eget et libero. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Cras hendrerit ullamcorper sapien vitae luctus. Quisque vel diam massa. Vestibulum dui nibh, facilisis vel vestibulum eu, viverra in quam.
-%
-%\begin{theorem}
-%If the active scalar $\theta$ satisfies
-%the equation \eqref{weaksol}, then $\varphi$ satisfies the equation
-%\begin{eqnarray}
-%\mfrac{\pr \varphi}{\pr t}(x,t)&=&\hspace{-2pt}\dst
-%\int_{\fd}\mfrac{\mfrac{\pr \varphi}{\pr x}(x,t)-\mfrac{\pr
-%\varphi}{\pr
-%u}(u,t)}{[(x-u)^{2}+(\varphi(x,t)-\varphi(u,t))^{2}]^{\f12}}\nonumber\\
-%&&
-%\chi(x-u,\varphi(x,t)-\varphi(u,t)) du \hspace{3pt} +
-%\nonumber\\
-%&+&\dst \int_{\fd} \Big{[}\mfrac{\pr \varphi} {\pr
-%x}(x,t)-\mfrac{\pr \varphi}{\pr u} (u,t)\Big{]}
-%\nonumber\\&&
-%\eta(x-u,\varphi(x,t)-\varphi(u,t)) du + Error
-%\end{eqnarray}
-%with $|Error|\leq C\, \delta | log\delta| $ where $C$ depends only
-%on $\|\theta\|_{L^{\infty}}$ and $\|
-%\nabla\varphi\|_{L^{\infty}}$.
-%\end{theorem}
-%
-%Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Integer accumsan ornare tortor at varius. Phasellus ullamcorper blandit dolor sit amet tempus. Curabitur ligula urna, ultrices in iaculis eu, eleifend vel urna. Praesent ullamcorper imperdiet purus, ut interdum sem interdum dictum. Proin euismod volutpat eros ac mattis. Quisque sit amet massa ac tortor cursus malesuada at vitae nisi. Nam quis neque et nunc vehicula cursus sit amet at tellus.
-%\end{materials}
-
-%----------------------------------------------------------------------------------------
-%	APPENDICES (OPTIONAL)
-%----------------------------------------------------------------------------------------
-%
-%\appendix
-%An appendix without a title.
-%
-%\appendix[Appendix title]
-%An appendix with a title.
-%
-%----------------------------------------------------------------------------------------
-%	ACKNOWLEDGEMENTS
-%----------------------------------------------------------------------------------------
-%
-%\begin{acknowledgments}
-%This work was partially supported by a grant from the Spanish Ministry of Science and Technology.
-%\end{acknowledgments}
-
-%----------------------------------------------------------------------------------------
-%	BIBLIOGRAPHY
-%----------------------------------------------------------------------------------------
-
-%% PNAS does not support submission of supporting .tex files such as BibTeX.
-%% Instead all references must be included in the article .tex document. 
-%% If you currently use BibTeX, your bibliography is formed because the 
-%% command \verb+\bibliography{}+ brings the <filename>.bbl file into your
-%% .tex document. To conform to PNAS requirements, copy the reference listings
-%% from your .bbl file and add them to the article .tex file, using the
-%% bibliography environment described above.  
-
-%%  Contact pnas@nas.edu if you need assistance with your
-%%  bibliography.
-
-% Sample bibliography item in PNAS format:
-%% \bibitem{in-text reference} comma-separated author names up to 5,
-%% for more than 5 authors use first author last name et al. (year published)
-%% article title  {\it Journal Name} volume #: start page-end page.
-%% ie,
-% \bibitem{Neuhaus} Neuhaus J-M, Sitcher L, Meins F, Jr, Boller T (1991) 
-% A short C-terminal sequence is necessary and sufficient for the
-% targeting of chitinases to the plant vacuole. 
-% {\it Proc Natl Acad Sci USA} 88:10362-10366.
-
-
-%% Enter the largest bibliography number in the facing curly brackets
-%% following \begin{thebibliography}
+\section{Experiments}
+asdf
+\section{Results}
+asdf
+\section{Conclusion}
+asdf
 
 \begin{thebibliography}{10}
-\bibitem{zimmer}
-H.~Zimmer, {\em PDE-based image compression using corner information}, Master's Thesis, Dept. of Informatics and Mathematics, Saarland University, (2007).
+\bibitem{wang}
+Hongling Wang, Joseph Kearney, and Kendall Atkinson, {\em Robust and Efficient Computation of the Closest Point on a Spline Curve}, Dept. of Computer Science, The University of Iowa, (2002).
 
-\bibitem{jpeg}
-Wikipedia, {\em JPEG}, Accessed December 15, 2003.
-
-\bibitem{distasi}
-R.~Distasi, M.~Nappi, and S.~Virtulano, {\em Image Compression by {BTTC}-Tree Triangular Coding}, IEEE Transactions on Communication, 45, 9 (1997).
-
-\bibitem{galic}
-I.~Galic, J.~Weikert, et al, {\em Towards PDE-based Image Compression}, In N. Paragios, O. Faugeras, T. Chan, C. Schnšrr (Eds.): Variational, Geometric, and Level Set Methods in Computer Vision. Lecture Notes in Computer Science, Vol. 3752, Springer, Berlin, 37-48, 2005.
-
-\bibitem{weickertEED}
-J.~Weickert and H.~Scharr, {\em A Scheme for Coherence-Enhancing Diffusion
-Filtering with Optimized Rotation Invariance}, Journal of Visual Communication and Image Representation 13, 103Ð118 (2002)
-
-\bibitem{galic2}
-I. Galic, J. Weickert, M. Welk, A. Bruhn, A. Belyaev, H.-P. Seidel,{
-Image compression with anisotropic diffusion},
-Journal of Mathematical Imaging and Vision, Vol. 31, 255Ð269, 2008. Invited Paper.
-
-\bibitem{weickert2}
-Weickert, J. {\em Anisotropic Diffusion in Image Processing}. B.G. Teubner, Stuggart (1998).
-
-\bibitem{kroon}
-D.~Kroon, {\em Image Edge Enhancing Coherence Filter Toolbox}, Matlab Toolbox, (2010),
-http://www.mathworks.com/matlabcentral/fileexchange/25449-image-edge-enhancing-coherence-filter-toolbox.
-
-\bibitem{peronamalik}
-P. Perona, J. Malik, {\em Scale-Space and Edge Detection Using Anisotropic Diffusion},
-IEEE Transactions on Pattern Analysis and Machine Intelligence, 12(7):629-639, July 1990.
+\bibitem{alsing}
+Roger Alsing, {\em Genetic Programming: Evolution of Mona Lisa}, http://rogeralsing.com/2008/12/07/genetic-programming-evolution-of-mona-lisa/.
   
 \end{thebibliography}
 
 %----------------------------------------------------------------------------------------
 
 \end{article}
-
-%----------------------------------------------------------------------------------------
-%	FIGURES AND TABLES
-%----------------------------------------------------------------------------------------
-
-%% Adding Figure and Table References
-%% Be sure to add figures and tables after \end{article}
-%% and before \end{document}
-
-%% For figures, put the caption below the illustration.
-%%
-%% \begin{figure}
-%% \caption{Almost Sharp Front}\label{afoto}
-%% \end{figure}
-
-%\begin{figure}[h]
-%\centerline{\includegraphics[width=0.4\linewidth]{placeholder.jpg}}
-%\caption{Figure caption}\label{placeholder}
-%\end{figure}
-
-%% For Tables, put caption above table
-%%
-%% Table caption should start with a capital letter, continue with lower case
-%% and not have a period at the end
-%% Using @{\vrule height ?? depth ?? width0pt} in the tabular preamble will
-%% keep that much space between every line in the table.
-
-%% \begin{table}
-%% \caption{Repeat length of longer allele by age of onset class}
-%% \begin{tabular}{@{\vrule height 10.5pt depth4pt  width0pt}lrcccc}
-%% table text
-%% \end{tabular}
-%% \end{table}
-
-%% For two column figures and tables, use the following:
-
-%% \begin{figure*}
-%% \caption{Almost Sharp Front}\label{afoto}
-%% \end{figure*}
-
-%% \begin{table*}
-%% \caption{Repeat length of longer allele by age of onset class}
-%% \begin{tabular}{ccc}
-%% table text
-%% \end{tabular}
-%% \end{table*}
-
-%----------------------------------------------------------------------------------------
 
 \end{document}
