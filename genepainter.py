@@ -17,7 +17,7 @@ from matplotlib.lines import Line2D
 # strokes per image
 strokes_start = 10
 strokes_min = 10
-strokes_max = 50
+strokes_max = 100
 
 # points per stroke
 min_spline_points = 2
@@ -40,31 +40,33 @@ p_stroke_width = 0.2
 
 # mutation, image level
 p_stroke_add = 0.0
-p_stroke_delete = 0.5
+p_stroke_delete = 0.01
 
 
 ### POPULATION PARAMETERS
 
 # images per population
-population_size = 100
+population_size = 40
 population_interval = 1
 
-# mutation, population level
+# successful parent cutoff
+parent_cutoff = 0.25
+
+# kill all parents
+kill_parents = False
+
+# crossover mutation, population level
 p_crossover = 0
 
 
-# OLD PARAMETERS
+### OLD PARAMETERS
 
-#evolving parameters
+# evolving parameters
 add_mutation_rate = 0.3
 change_or_delete_mutation_rate = 0.2
 # delete from 0 to 0.5, 0.5 to 1 is change
 conditional_delete_mutation_rate = 0.5
 num_children = 50
-
-#crossover rates
-crossover_rate = 0.2
-num_crossovers = 25
 
 
 # ITERATION PARAMETERS
@@ -319,6 +321,9 @@ class GenePainter(object):
 
     def paint(self):
 
+    	image = plt.imshow(self.source, interpolation='none', animated=True)
+        plt.draw()
+
         for _ in xrange(population_size):
             dna = DNAImage(self.shape)
             dna.update_fitness(self.source)
@@ -330,7 +335,7 @@ class GenePainter(object):
 
         while num_iter <= min_num_iter or (num_iter < max_num_iter and error_change >= epsilon):
 
-            print "Iteration:", num_iter
+            print "Generation:", num_iter
 
             #generate new candidates via mutation?
             new_candidates = []
@@ -344,7 +349,7 @@ class GenePainter(object):
 
             # update population
             for dna in self.population:
-            	dna.age += 1
+                dna.age += 1
 
             #do some crossovers
             #new_candidates = gen_crossovers(population)
@@ -358,10 +363,13 @@ class GenePainter(object):
             self.population = self.population[:population_size]
 
             # update error
-            new_best_error = self.population[0].fitness
-            error_change = min_error - new_best_error
-            min_error = new_best_error
-            print error_change
+            curr_min_error = self.population[0].fitness
+            error_change = min_error - curr_min_error
+            min_error = curr_min_error
+            print "Error Change:", error_change
+
+            #if error_change > 0.0:
+
 
             #print [dna.fitness for dna in self.population]
             num_iter += 1
@@ -376,30 +384,30 @@ class GenePainter(object):
         plt.imshow(self.population[0][1].render(), interpolation='none')
         plt.show()
 
+def sample_mutation():
+    image = DNAImage((256, 256), strokes=[])
+    stroke = GeneStroke.random((256, 256))
+    image.strokes.append(stroke)
+
+    plt.imshow(image.render(), interpolation='none')
+    plt.show()
+
+    stroke.mutate()
+
+    plt.imshow(image.render(), interpolation='none')
+    plt.show()
+
+
 if __name__ == "__main__":
 
-    source = read_image('ML257.png')
-    (a,b,c) = source.shape
-    #dump_dna(DNAImage((a,b)).strokes)
+    source = read_image('ML129.png')
+    p = GenePainter(source)
+    p.paint()
 
+    # (a,b,c) = source.shape
+    # dump_dna(DNAImage((a,b)).strokes)
 
-    #p = GenePainter(source)
-    #p.paint()
-
-
-    strokes = load_dna('2025-0.txt')
-    dna = DNAImage((a,b), strokes)
-    plt.imshow(dna.render(), interpolation='none')
-    plt.show()
-    # image = DNAImage((256, 256), strokes=[])
-    # stroke = GeneStroke.random((256, 256))
-    # image.strokes.append(stroke)
-
-    # plt.imshow(image.render(), interpolation='none')
+    # strokes = load_dna('run_00/4918-0.txt')
+    # dna = DNAImage((a,b), strokes)
+    # plt.imshow(dna.render(), interpolation='none')
     # plt.show()
-
-    # stroke.mutate()
-
-    # plt.imshow(image.render(), interpolation='none')
-    # plt.show()
-    
