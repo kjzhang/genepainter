@@ -289,7 +289,7 @@ which puts greater weights on larger pixel offsets. While we did try using both 
 \section{Image Rendering}
 To render the image of splines, the following method were considered. For every given point in the image, we determined the closest point on each and every spline curve to the point using the methods detailed by Wang et. al \cite{wang}. Using this distance and the width of the spline, we can determine whether the pixel would have been covered by a certain spline. Testing this method via Python, we determined that over 50 splines and an image of size 256 x 256, each complete rendering of the image took approximately 3 seconds on a 4.4Ghz i-3570k. Further testing yielded that the bottleneck factor was not the $L_2$-norm being computed but rather the actual rendering of the spline. In essence, for an image of size $MN$ with $K$ splines, it required $MNK$ iterations of the composite Newton method described in the paper.
 
-The next approach to achieve rendering in a computatably feasible manner was to draw the splines and then dilate the pixels of the spline. While it appears to have the same worst case performance, through the use of optimized packages, the rendering was achieved in approximately 0.01 seconds. We deemed that this computation time was sufficient for our purposes. 
+The next approach to achieve rendering in a computatably feasible manner was to draw the splines and then dilate the pixels of the spline. While it appears to have the same worst case performance, through the use of optimized packages, the rendering was achieved in approximately 0.01 seconds. Specifically, we chose to use the $RenderAgg$ package from the matplotlib python library. We deemed that this computation time was sufficient for our purposes. 
 
 \section{General Approach}
 Our general approach was to create a set of strokes $s$, each which represented a spline with a certain width, color, and opacity. These strokes would undergo the process of evolution as dictated by the genetic algorithm which would ultimately result in a set of improved strokes $\hat{s}$ that would resemble the original image.
@@ -297,12 +297,19 @@ Our general approach was to create a set of strokes $s$, each which represented 
 \subsection{Genes}
 The representation of the genes in this work was the stroke. These genes contained a list of points with x,y coordinates, determining each location of a sequential point for the spline. We restricted the number of points to be greater than 2 but less than 5. In the case that the points numbered from 2 to 3, the points did not actually form a spline and as a result, were connected via a straight line. We limited the number of points to be less than 5 to avoid resulting in a stroke that covered the entire image. All the points were generated via a random uniform distribution whose ranges were capped by the maximum width and maximum height of the image.  Additionally, the gene contained information about the color in the standard RGB format with a range of integer values of 0 to 255 for each color. All 3 channels had their values generated initially via a random uniform distribution. To deal with the problem of layering strokes, each stroke was also assigned an alpha value to add the factor of opacity into the painting. The alpha value was contained between the values of 0.25 and 1.0. The alpha value was also generated initially via a random uniform distribution. Finally, to account for the width of the stroke, a width factor was included in the stroke. To avoid drawing too thin or too wide, the width of the stroke was generate uniformly between 5 to 15 percent of the minimum of the height and width of the image.
 
+We present the pseudo-code in the next section.
+
 \subsection{Population and Survival Policy}
 Unlike the Alsing work, we choose to keep both an adjustable population of adults and children. In our tests with a 256 x 256 image, we used population sizes ranging from 30 to 100 for both children and for the parents. In addition, we added a survival policy to recently mutated children to give them a competitive advantage in the testing. That is, some children, regardless of fitness, are spared from the filtering process for an adjustable period of rounds. The intuition behind employing such a policy was to prevent our program from dropping into a local minimum. The only disadvantage of the policy is the sacrificed additional resources that are necessary to keep the less fit offspring alive and allowing them to reproduce.
+
+We present the pseudo-code in the next section.
 
 \subsection{Mutation}
 We incorporate multiple levels of mutation to provide for the maximum level of adjustability. At the highest level, we have that each gene which is a stroke can be mutated via addition, editing, or deletion. In the case of addition which has an adjustable rate parameter, we append a completely random new stroke based on the same initial generation parameters to the DNA sequence. Given the opacity parameters, the ordering should not matter. In the case of deletion, we can choose to delete one of the genes or strokes completely from the sequence. Finally, in the case of editing, we can choose to replace the gene with a completely new gene, i.e. addition and deletion combined.
 However, we note the mutation for editing may be too drastic and hence, we have a separate level of mutations. Instead of simply changing the entire stroke, we mutate specific attributes of the stroke. This method should prove to be useful when trying to fine tune an image instead of attempting to completely start fresh. We structure the random generation by creating normal distributions centered around the current values for the locations, width, opacity, and color with an adjustable standard deviation. Essentially, instead of randomly guessing with no bias, we attempt to shift the stroke slightly and see if we can find any improvements nearby. Additionally, in this case, we can also choose to remove or add points in the spline of the stroke.
+
+We present the pseudo-code in the next section.
+
 
 \subsection{Crossovers}
 The crossoveres of the DNA were implemented in a couple of methods.
@@ -310,18 +317,160 @@ The crossoveres of the DNA were implemented in a couple of methods.
 First, the most naive method we chose to use was to pick two DNA strands and we uniformly randomly picked genes or strokes from both strands. Additionally, we pick one strand randomly over the other to determine the length of the strand. However, we expect such a method to yield a random data that does not significantly improve the result. That is, given that a group of strokes together are what most likely cause the fitness to do well as a whole, removing one of these from the group or merging two groups will not necessarily improve the fitness unless they are a large mutually exclusive set.
 
 The other approach we attempt is to swap out entire regions from the DNA strand in an attempt to transfer entire groups of strokes that work well together.
+We present the pseudo-code in the next section.
 
 \section{Implementation}
 We detail our actual implementation below.
+
 \subsection{Downsampling}
 One of the key limitations that we soon realized was the running time required to generate reasonable results. Hence, given these limitations, it would be computationally infeasible to directly apply genetic algorithms to large pictures. However, we can instead reduce the size of the image to a much smaller level that allows for quick processing. After running the algorithm on the less detailed but similar representation, we can enlarge the image to the next level along with the doubling the sizes of the strokes.
+
 Intuitively, this would allow us to determine the general strokes necessary to produce the key features of the picture quickly. The remaining details which would normally take an exorbitant amount of time to be fine tuned would be done much quicker via a narrowed range of mutation as described above. We detail the pseudo code below.
 
+\subsection{Writing DNA to Files}
+One of the core difficulties we encountered was with the duration length of our experiments. That is, due to the computationally intensive manner, we found that our processes would often stall. Moreover, the result of the processing could not be seen until after the trials had finished, limting our ability to test quickly and alter our supervision. To resolve this issue, we chose to write the entire population to a file at each improvement. While this slows the process down due to the File I/O necessary, we believe its utility is worth the cost. We present a sample of our semi-colon delmited format for a single stroke below.
+
+\begin{verbatim}
+shape:(128L, 128L);
+sx:[ 74.62566933  21.69977093  22.68605165];
+sy:[  67.09635735  109.9504711    18.90664948];
+color:(0.027076976805653685, 
+0.16087405681211719, 
+0.14684489042167803);
+alpha:0.8511196927;
+width:25
+\end{verbatim}
+
+\subsection{Gene Pseudo-Code}
+\begin{verbatim}
+class GeneStroke
+  properties
+    shape
+    spline_xs
+    spline_ys
+    color
+    alpha
+    width
+\end{verbatim}
+
+\subsection{Population/Survival Policy Pseudo-Code}
+\begin{verbatim}
+List current_generation
+List old_enough
+new_mutations = mutate(current_generation)
+For dna in current_generations
+  If Age(dna) > X
+    Add dna to old_enough
+  End If
+EndFor
+survived = Prune old_enough
+current_generation = survived + mutations
+Increase Age for all dna in current_generation
+\end{verbatim}
+
+\subsection{Mutation Pseudo-Code}
+\paragraph{DNA Level Mutation}
+\begin{verbatim}
+Given DNA Strand D
+  D_tmp = Clone D
+  For gene in D_tmp
+    If Random < Probability of Delete or Edit
+      If Scaled Random < Cond. Probability of Edit
+        gene = new random stroke
+      Else
+        Delete gene/stroke
+      EndIf
+    EndIf
+  End For
+  
+  If Random < Probability of Adding Stroke,
+    Add New Random Stroke
+  EndIf
+\end{verbatim}
+\paragraph{Gene Level Mutation}
+\begin{verbatim}
+While nothing mutated
+  If Random < Prob mutate color
+    Color = Normal(prev value, 0.15,
+    				 min_color, max_color)
+    Break
+  EndIf
+  
+  If Random < Prob mutate alpha
+    Alpha = Normal(prev value, 0.15,
+    				 min_alpha, max_alpha)
+    Break
+  EndIf
+  
+  If Random < Prob mutate width
+    Width = Normal(prev value, 0.15,
+    				 min_width, max_width)
+    Break
+  EndIf
+  
+  If Random < Prob Add Point
+    Append Random Point to Spline
+    Break
+  EndIf
+  
+  If Random < Prob Delete Point
+    Pick Random Index of Point
+    Dlete Spline point at Index
+    Break
+  EndIf
+  
+  If Random < Prob Edit Point
+  	Pick Random Index of Point
+  	point at index =
+  	  Normal(prev_value, 0.05*shape,
+  	  	0, max_dim)
+  	Break
+  EndIf
+
+End While
+\end{verbatim}
+
+\subsection{Crossover Pseudo-Code}
+\begin{verbatim}
+Choose random DNA A and random DNA B
+For each index in A
+  If Random < prob pick
+    gene at index in A =
+      gene at index for B
+  End If
+End For
+\end{verbatim}
+
+\subsection{Minimal Supervision}
+Our minimal supervision implementation uses the following parameters: the number of strokes per DNA strand is 50, a maximum population size of 10, minimum spline points of 2 and a maximum spline points of 3, add mutation rate of 0.2, change or delete mutation rate of 0.07, conditional delete mutation rate of 0.5, a maximum children population of 25, no crossovers, minimum iteration of 50,000. This version employed only DNA level mutations and any sort of mutation resulted in a completely new stroke being generated. We detail the psuedo-code below.
+
+\begin{enumerate}
+
+	\item Generate a set of 10 DNA strands each containing 50 random strokes
+	\item Initialize $NumIter$ Counter
+	\item While $NumIter < 50000$ And Change In Error in Last 10 rounds is 0
+	\item Generate set of 25 mutations
+	\item Pick top 10 from the 35 resulting strands
+	\item Increment $NumIter$
+	\item End While
+	\item Output Lowest Error Image
+
+\end{enumerate}
+
+\subsection{Maximal Supervision}
+stuff
+
+
 \section{Experiments}
-asdf
+
+
+
 \section{Results}
 \subsection{Minimal Supervision}
 \[ \includegraphics[scale=0.22]{../figure_1.png} \includegraphics[scale=0.20]{../figure_2.png} \]
+Here, we have two results for running our 
+
+
 
 
 \section{Conclusion}
